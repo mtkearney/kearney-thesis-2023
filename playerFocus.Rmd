@@ -1,0 +1,655 @@
+---
+title: "workingThesis"
+output: html_document
+date: '2022-11-19'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ncaahoopR)
+```
+```{r}
+filter = fullELO_2019 %>% filter(`times updated` > 15) %>% group_by(Team) %>% summarize(ELO_Rating = mean(ELO_Rating)) %>% arrange(desc(ELO_Rating))
+
+full = fullELO_2017 %>% group_by(Team) %>% summarize(ELO_Rating = mean(ELO_Rating)) %>% arrange(desc(ELO_Rating))
+```
+
+```{r}
+kenpom2016condense = kenpom2016condense %>% mutate(Rating = 64/RankAdjEM) %>% arrange(-Rating)
+
+ids
+```
+
+```{r}
+library(ncaahoopR)
+ids
+
+test = edit(left_join(regions_2015, ids, by = c("Team" = 'team')))
+test = edit(test)
+left_join(test, ids, by = c("Team" = 'team'))
+
+teams_2019
+
+```
+
+```{r}
+true_filtered_ELO = data.frame(matrix(nrow = 0, ncol = 3))
+eloCols = c('ELO_Rating', "Season", 'Team')
+colnames(true_filtered_ELO) = eloCols
+
+increment2 = 0
+
+for (team1 in teams_2019$Team) {
+
+starter_df = data.frame(matrix(nrow = 0, ncol = 6))
+eloCols = c("Player", 'Player_ID', 'Game', 'Game_Num', 'Starter', 'Minutes')
+colnames(starter_df) = eloCols
+increment = 1
+increment2 = increment2 + 1
+schedule = get_schedule(team = team1, season = '2018-19') 
+schedule = schedule %>% mutate(test = substring(schedule$game_id, 1, 3)) %>% filter(date < '2019-03-16')# %>% filter(game_id != 400988621) %>% filter(game_id != 400991723)   #%>% filter(test != '401')
+schedule = schedule$game_id
+schedule = schedule[(NROW(schedule)-6):NROW(schedule)]
+for (x in schedule){
+  game = get_boxscore(x)[[as.character(regions_2019[increment2, 'Team'])]]
+  for (row in 1:(nrow(game)-1)){
+    starter = (if (game[row, 'starter'] == TRUE){
+      1
+    } else{
+      0
+    })
+    starter_df[nrow(starter_df) + 1, 'Player'] = game[row, 'player']
+    starter_df[nrow(starter_df), 'Player_ID'] = as.numeric(game[row, 'player_id'])
+    starter_df[nrow(starter_df), 'Game'] = x
+    starter_df[nrow(starter_df), 'Game_Num'] = increment
+    starter_df[nrow(starter_df), 'Starter'] = starter
+    starter_df[nrow(starter_df), 'Minutes'] = game[row, 'MIN']
+  }
+  increment = increment + 1
+}
+
+
+df_1 = starter_df %>% group_by(Player_ID) %>% summarize(starts = sum(Starter), min = mean(Minutes)) %>% arrange(desc(starts)) %>% slice(1:5) 
+
+df_2 = starter_df  %>% group_by(Player_ID) %>% summarize(starts = sum(Starter), min = mean(Minutes)) %>% arrange(desc(starts)) %>% slice(6:nrow(starter_df)) %>% arrange(desc(min)) %>% slice(1:2)
+
+players_to_join = starter_df %>% select(Player, Player_ID) %>% group_by(Player_ID) %>% summarize(Player = min(Player))
+filtered = bind_rows(df_1, df_2)
+filtered = inner_join(filtered, players_to_join, by = 'Player_ID') 
+
+filtered = inner_join(filtered, newFullELO2019_2, by = 'Player_ID')
+
+true_filtered_ELO[nrow(true_filtered_ELO) + 1, 'ELO_Rating'] =  mean(filtered$ELO_Rating)
+true_filtered_ELO[nrow(true_filtered_ELO), 'Team'] =  team1
+true_filtered_ELO[nrow(true_filtered_ELO), 'Season'] =  '2014-15'
+
+
+}
+
+true_filtered_ELO_2019_new = true_filtered_ELO
+
+```
+
+```{r}
+schedule
+test = bind_cols(regions_2019, true_filtered_ELO_2019_new)
+test = left_join(test, plotdftakenew_2019, by = c('Team...1' = 'Team'))
+true_filtered_players = test %>% select(Team...1, ELO_Rating.x, seed) %>% rename(Team = Team...1, ELO_Rating = ELO_Rating.x)
+true_filtered_players %>% arrange(-ELO_Rating)
+```
+
+```{r}
+
+# Loop to assign boxscore to team
+season = '2022-2023'
+dates = c("2018-11-06", "2018-11-07", "2018-11-08", "2018-11-09")
+
+daily_schedule = get_master_schedule("2022-11-07")
+calc_ELO_per_season(dates)
+
+increment = 4
+
+get_boxscore(400991466)
+daily_schedule
+```
+
+
+```{r}
+
+for (x in 1:length(split)){
+    for (date in 1:2){
+    print(split[[increment]][date])
+    daily_schedule = get_master_schedule(as.character(split[[as.integer(increment)]][date]))
+    na = c(which(is.na(daily_schedule$game_id), arr.ind = TRUE))
+      for (x in na){
+        empty_gameID[nrow(empty_gameID) + 1, 'date'] = dates[date]
+        empty_gameID[nrow(empty_gameID), 'home_team'] = trimws(daily_schedule[x, 'home'], whitespace = "[\\h\\v]")
+        empty_gameID[nrow(empty_gameID), 'away_team'] = trimws(daily_schedule[x, 'away'], whitespace = "[\\h\\v]")
+        empty_gameID[nrow(empty_gameID), 'reason'] = "N/A ID"
+      }
+    if (sum(is.na(daily_schedule$game_id)) > 0){
+    daily_schedule = daily_schedule[-na, ]
+    }
+  
+
+  
+  for (val in 1:(nrow(daily_schedule))){
+   tryCatch({
+    id = get_boxscore(400989400)#daily_schedule[1, 'game_id'])
+    team = daily_schedule[1, 'home']
+    team = 'South Dakota State'#trimws(team, whitespace = "[\\h\\v]")
+    TMNT = id[[team]]
+    TMNT[,5:6] = sapply(TMNT[, 5:6], as.numeric)
+    TMNT[,1] = sapply(TMNT[, 1], as.numeric)
+    TMNTtotOReb = sum(TMNT[1:nrow(TMNT)-1, 'OREB'])
+    TMNTtotDReb = sum(TMNT[1:nrow(TMNT)-1, 'DREB'])
+    opponent = 'Omaha'#trimws(daily_schedule[1, 'away'], whitespace = "[\\h\\v]")
+    OPP = id[[opponent]]
+    OPP[,5:6] = sapply(OPP[, 5:6], as.numeric)
+    OPP[,1] = sapply(OPP[, 1], as.numeric)
+    OPPtotDReb = sum(OPP[1:nrow(OPP)-1, 'DREB'])
+    OPPtotOReb = sum(OPP[1:nrow(OPP)-1, 'OREB'])
+    drop = c()
+    TMNT[nrow(TMNT), 'MIN'] = sum(TMNT[1:(nrow(TMNT)-1), 'MIN'])
+    if (is.na(sum(TMNT[1:(nrow(TMNT)-1), 'MIN'])) | sum(TMNT[1:(nrow(TMNT)-1), 'MIN']) == 0) {  
+      empty_gameID[(nrow(empty_gameID)+1), 'reason'] = "invalid DF"
+      empty_gameID[nrow(empty_gameID), 'game_id'] = daily_schedule[val, 'game_id']
+      
+    } else {
+    for (row in 1:(nrow(TMNT)-1)){
+      if (TMNT[row, 'MIN'] < 10){
+        drop = c(drop, row)
+      }
+    }
+      if (sum(drop) > 0){
+      TMNT = TMNT[-drop,]
+      }
+    # Offensive Rating
+
+      
+      if(is.na(TMNT[nrow(TMNT), 'FTM']/TMNT[nrow(TMNT), 'FTA']) == TRUE){
+          teamFTP = 0
+        }else{
+          teamFTP = TMNT[nrow(TMNT), 'FTM']/TMNT[nrow(TMNT), 'FTA']
+        }
+      
+      # Team Scoring Possession
+        TeamSCPoss = (TMNT[nrow(TMNT), 'FGM']) + (1 - (1 - teamFTP)^2)*TMNT[nrow(TMNT), 'FTA']*0.4
+        
+      # Team Play %
+      TeamPlayPercent = TeamSCPoss/(TMNT[nrow(TMNT), 'FGA'] + TMNT[nrow(TMNT), 'FTA']*.4 + TMNT[nrow(TMNT), 'TO'])
+      
+    for (row in 1:(nrow(TMNT)-1)) {
+       # Basic stats
+      playerOREB = TMNT[row, 'OREB']
+      
+        percentMP = TMNT[row, 'MIN']/(TMNT[nrow(TMNT), 'MIN']/5)
+        if(is.na(TMNT[row, 'FTM']/TMNT[row, 'FTA']) == TRUE){
+          freeThrowPercent = 0
+        }else{
+          freeThrowPercent = TMNT[row, 'FTM']/TMNT[row, 'FTA']
+        }
+        
+        
+
+
+        # qAST
+        qAST = (percentMP*(1.14*((TMNT[nrow(TMNT), 'AST']-TMNT[row, 'AST'])/TMNT[nrow(TMNT), 'FGM']))) + ((((TMNT[nrow(TMNT), 'AST']/TMNT[nrow(TMNT), 'MIN'])*TMNT[row, 'MIN']*5-TMNT[row, 'AST'])/((TMNT[nrow(TMNT), 'FGM']/TMNT[nrow(TMNT), 'MIN'])*TMNT[row, 'MIN']*5-TMNT[row, 'FGM']))*(1-percentMP))
+    
+        # Field Goal Part
+        FGPart = TMNT[row, 'FGM']*(1. - 0.5*((TMNT[row, 'PTS']-TMNT[row, 'FTM'])/(2.*TMNT[row, 'FGA']))*qAST)
+    
+        # Assist Part
+        ASTPart = 0.5*(((TMNT[nrow(TMNT), 'PTS'] - TMNT[nrow(TMNT), 'FTM']) - (TMNT[row, 'PTS']-TMNT[row, 'FTM']))/(2*(TMNT[nrow(TMNT), 'FGA'] - TMNT[row, 'FGA'])))*TMNT[row, 'AST']
+        
+        # Free Throw Part
+        FTPart = (1 - (1 - (freeThrowPercent))^2)*0.4*TMNT[row, 'FTA']
+        
+        # Team OREB%
+        TeamOREBPercent = TMNTtotOReb/(TMNTtotOReb + ((sum(OPP[1:nrow(OPP)-1, 'REB']))-sum(OPP[1:nrow(OPP)-1, 'OREB'])))
+        
+        # Team OREB Weight
+        TeamOREBWeight = ((1. - TeamOREBPercent)*TeamPlayPercent)/((1. - TeamOREBPercent)*TeamPlayPercent +TeamOREBPercent*(1-TeamPlayPercent))
+        
+        # OREB Part
+        OREBPart = playerOREB*TeamOREBWeight*TeamPlayPercent
+        
+        # Scoring Possession
+        SCPoss = (FGPart + ASTPart + FTPart)*(1-(TMNTtotOReb/TeamSCPoss)*(TeamOREBWeight*TeamPlayPercent)) + OREBPart
+    
+        #FG per Possession
+        FGxPoss = (TMNT[row, 'FGA'] - TMNT[row, 'FGM'])*(1-1.07*TeamOREBPercent)
+        
+        # FT Per Possession
+        FTxPoss = ((1 - freeThrowPercent)^2)*0.4*TMNT[row, 'FTA']
+        
+        # Total Possessions
+        TotPoss = SCPoss + FGxPoss + FTxPoss + TMNT[row, 'TO']
+        
+        # Points Produced - Field Goals
+        PProdFGPart = 2*(TMNT[row, 'FGM'] + 0.5*TMNT[row, '3PTM']) * (1-0.5*((TMNT[row, 'PTS'] - TMNT[row, 'FTM'])/(2*TMNT[row, 'FGA']))*qAST)
+        if (is.na(PProdFGPart) == TRUE){
+          PProdFGPart = 0
+        }
+        
+        # Points Produced - OREBs
+        PProdOREBPart = playerOREB * TeamOREBWeight*TeamPlayPercent*((TMNT[nrow(TMNT), 'PTS'])/(TMNT[nrow(TMNT), 'FGM']+(1.-(1.-teamFTP)^2)*.4*TMNT[nrow(TMNT), 'FTA']))
+        if (is.na(PProdOREBPart) == TRUE){
+          PProdOREBPart = 0
+        }
+        
+        #Points Produced - Assists
+        PProdASTPart = 2*((TMNT[nrow(TMNT), 'FGM'] - TMNT[row, 'FGM'] + .5*(TMNT[nrow(TMNT), '3PTM']-TMNT[row, '3PTM']))/(TMNT[nrow(TMNT), 'FGM'] - TMNT[row, 'FGM']))*0.5*(((TMNT[nrow(TMNT), 'PTS'] - TMNT[nrow(TMNT), 'FTM']) - (TMNT[row, 'PTS']-TMNT[row, 'FTM']))/(2*(TMNT[nrow(TMNT), 'FGA']-TMNT[row, 'FGA'])))*TMNT[row, 'AST']
+        if (is.na(PProdASTPart) == TRUE){
+          PProdASTPart = 0
+        }
+        
+        #Total Points Produced
+        PProd = (PProdFGPart + PProdASTPart + TMNT[row, 'FTM'])*(1.-(TMNTtotOReb/TeamSCPoss)*TeamOREBWeight*TeamPlayPercent) + PProdOREBPart
+        if (is.na(PProd) == TRUE){
+          PProd = 0
+        }
+        
+        # ORTG
+        ORTG = 100*(PProd / TotPoss)
+        TMNT[row, 'ORtg'] = ORTG
+        TMNT[row, 'TotPoss'] = TotPoss
+        
+        
+    }
+    TMNT[nrow(TMNT), 'ORtg'] = 0
+    
+    ## Drop Rows with NA ORTG
+    TMNT = TMNT[!is.na(TMNT$ORtg),]
+    TMNT[nrow(TMNT), 'ORtg'] = sum(TMNT[, 'ORtg'])/(nrow(TMNT)-1)
+
+    #### Defensive Rating
+
+    totalPoss = 0.5 * ((TMNT[nrow(TMNT), 'FGA'] + 0.4 * TMNT[nrow(TMNT), 'FTA'] - 1.07*(TMNTtotOReb / (TMNTtotOReb + OPPtotDReb)) * (TMNT[nrow(TMNT), 'FGA'] - TMNT[nrow(TMNT), 'FGM']) + TMNT[nrow(TMNT), 'TO']) + (OPP[nrow(OPP), 'FGA'] + 0.4*OPP[nrow(OPP), 'FTA'] - 1.07*(OPPtotOReb / (OPPtotOReb + OPPtotDReb)) * (OPP[nrow(OPP), 'FGA'] - OPP[nrow(OPP), 'FGM']) + OPP[nrow(OPP), 'TO']))
+    
+    DFGPercent= OPP[nrow(OPP), 'FGM']/OPP[nrow(OPP), 'FGA']
+    DORPercent = OPPtotOReb / (OPPtotOReb + TMNTtotDReb)
+    FMwt = (DFGPercent * (1-DORPercent)) / (DFGPercent * (1- DORPercent) + (1-DFGPercent)* DORPercent)
+    oppFTPercent = OPP[nrow(OPP), 'FTM']/OPP[nrow(OPP), 'FTA']
+    if (is.na(oppFTPercent)){
+      oppFTPercent = 0
+    }
+    
+    Team_Def_Rating = 100 * (OPP[nrow(OPP), 'PTS']/totalPoss)
+    D_PTS_per_ScPoss = OPP[nrow(OPP), 'PTS']/(OPP[nrow(OPP), 'FGM'] + (1 - (1 - (oppFTPercent))**2)  * OPP[nrow(OPP), 'FTA']*.4)
+    
+    for (row in 1:(nrow(TMNT)-1)) {
+      Stops1 = TMNT[row, 'STL'] + TMNT[row, 'BLK'] * FMwt * (1 - 1.07 * DORPercent) + TMNT[row, 'DREB'] * (1 - FMwt)
+      Stops2 = (((OPP[nrow(OPP), 'FGA']-OPP[nrow(OPP), 'FGM'] - TMNT[nrow(TMNT), 'BLK'])/ TMNT[nrow(TMNT), 'MIN']) * FMwt * (1 - 1.07 * DORPercent) + ((OPP[nrow(OPP), 'TO'] - TMNT[nrow(TMNT), 'STL']) / TMNT[nrow(TMNT), 'MIN'])) * TMNT[row, 'MIN'] + (TMNT[row, 'PF']/TMNT[nrow(TMNT), 'PF']) * 0.4 * OPP[nrow(OPP), 'FTA'] * (1 - ( oppFTPercent))**2
+      if (is.na(Stops2) == TRUE){
+          Stops2 = 0
+        }
+      Stops = Stops1 + Stops2
+      StopPercent = (Stops * sum(OPP[1:nrow(OPP)-1, 'MIN'])) / (totalPoss * TMNT[row, 'MIN'])
+      
+      DRtg = Team_Def_Rating + 0.2 * (100 * D_PTS_per_ScPoss * (1 - StopPercent) - Team_Def_Rating)
+      TMNT[row, 'DRtg'] = DRtg
+    }
+    
+    
+    
+    #### Net Rating
+    for (row in 1:(nrow(TMNT)-1)) {
+      TMNT[row, 'USG'] = 100* ((TMNT[row, 'FGA'] + 0.44*TMNT[row, 'FTA'] + TMNT[row, 'TO']) * (TMNT[nrow(TMNT), 'MIN']/5)) / (TMNT[row, 'MIN']* (TMNT[nrow(TMNT), 'FGA'] + 0.44*TMNT[nrow(TMNT), 'FTA'] + TMNT[nrow(TMNT), 'TO']))
+      TMNT[row, 'Net'] = TMNT[row, 'ORtg'] - TMNT[row, 'DRtg']
+      net = TMNT[row, 'ORtg'] - TMNT[row, 'DRtg']
+      
+    }
+    TMNT = TMNT %>% mutate(Net = case_when(Net > 120 ~ 120, 
+                                    TRUE ~ Net))
+    TMNT %>% mutate(weighted_net = USG*Net)
+    
+    #### ELO Rating
+    
+    # Static Vars
+    AvgPlayerNet = sum(TMNT[1:nrow(TMNT)-1, 'Net'])/(nrow(TMNT)-1)
+    
+    #Check if ELO needs to be set or grab avg elo
+    if (team %in% teamELO_df$Team & opponent %in% teamELO_df$Team){
+        TMNTelo = sum(teamELO_df[which(teamELO_df$Team == team ), 'ELO_Rating']) / sum(teamELO_df$Team == team) + 40
+        OPPelo = sum(teamELO_df[which(teamELO_df$Team == opponent ), 'ELO_Rating']) / sum(teamELO_df$Team == opponent)
+      } else if (team %in% teamELO_df$Team & !(opponent %in% teamELO_df$Team)){
+        TMNTelo = sum(teamELO_df[which(teamELO_df$Team == team ), 'ELO_Rating']) / sum(teamELO_df$Team == team) + 40
+        OPPelo = 1500
+      } else if (opponent %in% teamELO_df$Team & !(team %in% teamELO_df$Team)) {
+        TMNTelo = 1540
+        OPPelo = sum(teamELO_df[which(teamELO_df$Team == opponent ), 'ELO_Rating']) / sum(teamELO_df$Team == opponent)
+      } else {
+        TMNTelo = 1540
+        OPPelo = 1500
+      }
+    
+    # calc if team won
+    if (TMNT[nrow(TMNT), 'PTS']-OPP[nrow(OPP), 'PTS'] > 0){
+      win = 1
+      elodiff = TMNTelo - OPPelo
+    } else{
+      win = 0
+      elodiff = OPPelo - TMNTelo
+    }
+    
+      # calc MOV, account for home advantage
+    MOV = ((abs(TMNT[nrow(TMNT), 'PTS']-OPP[nrow(OPP), 'PTS'])+3)**.8)/(7.5 + .006*(elodiff))
+    
+    # win probability
+    prob_Win = 1/(1+ 10^((-elodiff)/400))
+    
+    if ((as.numeric(player_id)) %in% ELO_historical$Player_ID){
+        eloOld = (ELO_historical[ELO_historical$Player_ID == as.numeric(player_id), 'ELO_Rating'])*.9 + 1500*.1
+        TMNTelonew = eloOld
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'ELO_Rating'] = round(TMNTelonew, 3)
+      } 
+        
+        
+      for (row in 1:(nrow(TMNT)-1)) {
+      player = TMNT[row, 'player']
+      player_id = TMNT[row, 'player_id']
+      
+     if ((as.numeric(player_id)) %in% ELO_df$Player_ID){
+        eloOld = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'ELO_Rating']
+        TMNTelonew = eloOld + 30*(MOV)*(win - prob_Win) + TMNT[row, 'Net']/10
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'ELO_Rating'] = round(TMNTelonew, 3)
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'GOG_Change'] =  ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'GOG_Change'] + (TMNTelonew - eloOld)
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'times updated'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'times updated']+1
+
+         
+      } else { 
+        TMNTelonew = 1500 + 30*(MOV)*(win - prob_Win) + TMNT[row, 'Net']/10
+        ELO_df[(nrow(ELO_df) + 1), 'Team'] = team
+        ELO_df[nrow(ELO_df), 'ELO_Rating'] = round(TMNTelonew, 3)
+        ELO_df[nrow(ELO_df), 'Player'] = player
+        ELO_df[nrow(ELO_df), 'Player_ID'] = player_id
+        ELO_df[nrow(ELO_df), 'Season'] = season
+        ELO_df[nrow(ELO_df), 'GOG_Change'] = 0
+        ELO_df[nrow(ELO_df), 'times updated'] = 1
+        }
+    
+    }
+    
+    
+  
+    
+    
+    
+    #AWAY TEAM ELO
+    team = daily_schedule[val, 'away']
+    team = trimws(team, whitespace = "[\\h\\v]")
+    TMNT = id[[team]]
+    TMNT[,5:6] = sapply(TMNT[, 5:6], as.numeric)
+    TMNT[,1] = sapply(TMNT[, 1], as.numeric)
+    TMNTtotOReb = sum(TMNT[1:nrow(TMNT)-1, 'OREB'])
+    TMNTtotDReb = sum(TMNT[1:nrow(TMNT)-1, 'DREB'])
+    opponent = trimws(daily_schedule[val, 'home'], whitespace = "[\\h\\v]")
+    OPP = id[[opponent]]
+    OPP[,5:6] = sapply(OPP[, 5:6], as.numeric)
+    OPP[,1] = sapply(OPP[, 1], as.numeric)
+    OPPtotDReb = sum(OPP[1:nrow(OPP)-1, 'DREB'])
+    OPPtotOReb = sum(OPP[1:nrow(OPP)-1, 'OREB'])
+    drop = c()
+    TMNT[nrow(TMNT), 'MIN'] = sum(TMNT[1:(nrow(TMNT)-1), 'MIN'])
+    for (row in 1:(nrow(TMNT)-1)){
+      if (TMNT[row, 'MIN'] < 10){
+        drop = c(drop, row)
+      }
+    }
+      if (sum(drop) > 0){
+      TMNT = TMNT[-drop,]
+      }
+    # Offensive Rating
+
+      
+      if(is.na(TMNT[nrow(TMNT), 'FTM']/TMNT[nrow(TMNT), 'FTA']) == TRUE){
+          teamFTP = 0
+        }else{
+          teamFTP = TMNT[nrow(TMNT), 'FTM']/TMNT[nrow(TMNT), 'FTA']
+        }
+      
+      # Team Scoring Possession
+        TeamSCPoss = (TMNT[nrow(TMNT), 'FGM']) + (1 - (1 - teamFTP)^2)*TMNT[nrow(TMNT), 'FTA']*0.4
+        
+      # Team Play %
+      TeamPlayPercent = TeamSCPoss/(TMNT[nrow(TMNT), 'FGA'] + TMNT[nrow(TMNT), 'FTA']*.4 + TMNT[nrow(TMNT), 'TO'])
+      
+    for (row in 1:(nrow(TMNT)-1)) {
+       # Basic stats
+      playerOREB = TMNT[row, 'OREB']
+      
+        percentMP = TMNT[row, 'MIN']/(TMNT[nrow(TMNT), 'MIN']/5)
+        if(is.na(TMNT[row, 'FTM']/TMNT[row, 'FTA']) == TRUE){
+          freeThrowPercent = 0
+        }else{
+          freeThrowPercent = TMNT[row, 'FTM']/TMNT[row, 'FTA']
+        }
+        
+        
+
+
+        # qAST
+        qAST = (percentMP*(1.14*((TMNT[nrow(TMNT), 'AST']-TMNT[row, 'AST'])/TMNT[nrow(TMNT), 'FGM']))) + ((((TMNT[nrow(TMNT), 'AST']/TMNT[nrow(TMNT), 'MIN'])*TMNT[row, 'MIN']*5-TMNT[row, 'AST'])/((TMNT[nrow(TMNT), 'FGM']/TMNT[nrow(TMNT), 'MIN'])*TMNT[row, 'MIN']*5-TMNT[row, 'FGM']))*(1-percentMP))
+    
+        # Field Goal Part
+        FGPart = TMNT[row, 'FGM']*(1. - 0.5*((TMNT[row, 'PTS']-TMNT[row, 'FTM'])/(2.*TMNT[row, 'FGA']))*qAST)
+    
+        # Assist Part
+        ASTPart = 0.5*(((TMNT[nrow(TMNT), 'PTS'] - TMNT[nrow(TMNT), 'FTM']) - (TMNT[row, 'PTS']-TMNT[row, 'FTM']))/(2*(TMNT[nrow(TMNT), 'FGA'] - TMNT[row, 'FGA'])))*TMNT[row, 'AST']
+        
+        # Free Throw Part
+        FTPart = (1 - (1 - (freeThrowPercent))^2)*0.4*TMNT[row, 'FTA']
+        
+        # Team OREB%
+        TeamOREBPercent = TMNTtotOReb/(TMNTtotOReb + ((sum(OPP[1:nrow(OPP)-1, 'REB']))-sum(OPP[1:nrow(OPP)-1, 'OREB'])))
+        
+        # Team OREB Weight
+        TeamOREBWeight = ((1. - TeamOREBPercent)*TeamPlayPercent)/((1. - TeamOREBPercent)*TeamPlayPercent +TeamOREBPercent*(1-TeamPlayPercent))
+        
+        # OREB Part
+        OREBPart = playerOREB*TeamOREBWeight*TeamPlayPercent
+        
+        # Scoring Possession
+        SCPoss = (FGPart + ASTPart + FTPart)*(1-(TMNTtotOReb/TeamSCPoss)*(TeamOREBWeight*TeamPlayPercent)) + OREBPart
+    
+        #FG per Possession
+        FGxPoss = (TMNT[row, 'FGA'] - TMNT[row, 'FGM'])*(1-1.07*TeamOREBPercent)
+        
+        # FT Per Possession
+        FTxPoss = ((1 - freeThrowPercent)^2)*0.4*TMNT[row, 'FTA']
+        
+        # Total Possessions
+        TotPoss = SCPoss + FGxPoss + FTxPoss + TMNT[row, 'TO']
+        
+        # Points Produced - Field Goals
+        PProdFGPart = 2*(TMNT[row, 'FGM'] + 0.5*TMNT[row, '3PTM']) * (1-0.5*((TMNT[row, 'PTS'] - TMNT[row, 'FTM'])/(2*TMNT[row, 'FGA']))*qAST)
+        if (is.na(PProdFGPart) == TRUE){
+          PProdFGPart = 0
+        }
+        
+        # Points Produced - OREBs
+        PProdOREBPart = playerOREB * TeamOREBWeight*TeamPlayPercent*((TMNT[nrow(TMNT), 'PTS'])/(TMNT[nrow(TMNT), 'FGM']+(1.-(1.-teamFTP)^2)*.4*TMNT[nrow(TMNT), 'FTA']))
+        if (is.na(PProdOREBPart) == TRUE){
+          PProdOREBPart = 0
+        }
+        
+        #Points Produced - Assists
+        PProdASTPart = 2*((TMNT[nrow(TMNT), 'FGM'] - TMNT[row, 'FGM'] + .5*(TMNT[nrow(TMNT), '3PTM']-TMNT[row, '3PTM']))/(TMNT[nrow(TMNT), 'FGM'] - TMNT[row, 'FGM']))*0.5*(((TMNT[nrow(TMNT), 'PTS'] - TMNT[nrow(TMNT), 'FTM']) - (TMNT[row, 'PTS']-TMNT[row, 'FTM']))/(2*(TMNT[nrow(TMNT), 'FGA']-TMNT[row, 'FGA'])))*TMNT[row, 'AST']
+        if (is.na(PProdASTPart) == TRUE){
+          PProdASTPart = 0
+        }
+        
+        #Total Points Produced
+        PProd = (PProdFGPart + PProdASTPart + TMNT[row, 'FTM'])*(1.-(TMNTtotOReb/TeamSCPoss)*TeamOREBWeight*TeamPlayPercent) + PProdOREBPart
+        if (is.na(PProd) == TRUE){
+          PProd = 0
+        }
+        
+        # ORTG
+        ORTG = 100*(PProd / TotPoss)
+        TMNT[row, 'ORtg'] = ORTG
+        TMNT[row, 'TotPoss'] = TotPoss
+        
+        
+    }
+    TMNT[nrow(TMNT), 'ORtg'] = 0
+    
+    ## Drop Rows with NA ORTG
+    TMNT = TMNT[!is.na(TMNT$ORtg),]
+    TMNT[nrow(TMNT), 'ORtg'] = sum(TMNT[, 'ORtg'])/(nrow(TMNT)-1)
+
+    #### Defensive Rating
+
+    totalPoss = 0.5 * ((TMNT[nrow(TMNT), 'FGA'] + 0.4 * TMNT[nrow(TMNT), 'FTA'] - 1.07*(TMNTtotOReb / (TMNTtotOReb + OPPtotDReb)) * (TMNT[nrow(TMNT), 'FGA'] - TMNT[nrow(TMNT), 'FGM']) + TMNT[nrow(TMNT), 'TO']) + (OPP[nrow(OPP), 'FGA'] + 0.4*OPP[nrow(OPP), 'FTA'] - 1.07*(OPPtotOReb / (OPPtotOReb + OPPtotDReb)) * (OPP[nrow(OPP), 'FGA'] - OPP[nrow(OPP), 'FGM']) + OPP[nrow(OPP), 'TO']))
+    
+    DFGPercent= OPP[nrow(OPP), 'FGM']/OPP[nrow(OPP), 'FGA']
+    DORPercent = OPPtotOReb / (OPPtotOReb + TMNTtotDReb)
+    FMwt = (DFGPercent * (1-DORPercent)) / (DFGPercent * (1- DORPercent) + (1-DFGPercent)* DORPercent)
+    oppFTPercent = OPP[nrow(OPP), 'FTM']/OPP[nrow(OPP), 'FTA']
+    if (is.na(oppFTPercent)){
+      oppFTPercent = 0
+    }
+    
+    Team_Def_Rating = 100 * (OPP[nrow(OPP), 'PTS']/totalPoss)
+    D_PTS_per_ScPoss = OPP[nrow(OPP), 'PTS']/(OPP[nrow(OPP), 'FGM'] + (1 - (1 - (oppFTPercent))**2)  * OPP[nrow(OPP), 'FTA']*.4)
+    
+    for (row in 1:(nrow(TMNT)-1)) {
+      Stops1 = TMNT[row, 'STL'] + TMNT[row, 'BLK'] * FMwt * (1 - 1.07 * DORPercent) + TMNT[row, 'DREB'] * (1 - FMwt)
+      Stops2 = (((OPP[nrow(OPP), 'FGA']-OPP[nrow(OPP), 'FGM'] - TMNT[nrow(TMNT), 'BLK'])/ TMNT[nrow(TMNT), 'MIN']) * FMwt * (1 - 1.07 * DORPercent) + ((OPP[nrow(OPP), 'TO'] - TMNT[nrow(TMNT), 'STL']) / TMNT[nrow(TMNT), 'MIN'])) * TMNT[row, 'MIN'] + (TMNT[row, 'PF']/TMNT[nrow(TMNT), 'PF']) * 0.4 * OPP[nrow(OPP), 'FTA'] * (1 - ( oppFTPercent))**2
+      if (is.na(Stops2) == TRUE){
+          Stops2 = 0
+        }
+      Stops = Stops1 + Stops2
+      StopPercent = (Stops * sum(OPP[1:nrow(OPP)-1, 'MIN'])) / (totalPoss * TMNT[row, 'MIN'])
+      
+      DRtg = Team_Def_Rating + 0.2 * (100 * D_PTS_per_ScPoss * (1 - StopPercent) - Team_Def_Rating)
+      TMNT[row, 'DRtg'] = DRtg
+    }
+    
+    #### Net Rating
+    for (row in 1:(nrow(TMNT)-1)) {
+      
+      TMNT[row, 'Net'] = TMNT[row, 'ORtg'] - TMNT[row, 'DRtg']
+    }
+    
+    #### ELO Rating
+    
+    # Static Vars
+    AvgPlayerNet = sum(TMNT[1:nrow(TMNT)-1, 'Net'])/(nrow(TMNT)-1)
+    
+    #Check if ELO needs to be set or grab avg elo
+    if (team %in% teamELO_df$Team & opponent %in% teamELO_df$Team){
+        TMNTelo = sum(teamELO_df[which(teamELO_df$Team == team ), 'ELO_Rating']) / sum(teamELO_df$Team == team) + 40
+        OPPelo = sum(teamELO_df[which(teamELO_df$Team == opponent ), 'ELO_Rating']) / sum(teamELO_df$Team == opponent)
+      } else if (team %in% teamELO_df$Team & !(opponent %in% teamELO_df$Team)){
+        TMNTelo = sum(teamELO_df[which(teamELO_df$Team == team ), 'ELO_Rating']) / sum(teamELO_df$Team == team) + 40
+        OPPelo = 1500
+      } else if (opponent %in% teamELO_df$Team & !(team %in% teamELO_df$Team)) {
+        TMNTelo = 1540
+        OPPelo = sum(teamELO_df[which(teamELO_df$Team == opponent ), 'ELO_Rating']) / sum(teamELO_df$Team == opponent)
+      } else {
+        TMNTelo = 1540
+        OPPelo = 1500
+      }
+    
+    # calc if team won
+    if (TMNT[nrow(TMNT), 'PTS']-OPP[nrow(OPP), 'PTS'] > 0){
+      win = 1
+      elodiff = TMNTelo - OPPelo
+    } else{
+      win = 0
+      elodiff = OPPelo - TMNTelo
+    }
+    
+      # calc MOV, account for home advantage
+    MOV = ((abs(TMNT[nrow(TMNT), 'PTS']-OPP[nrow(OPP), 'PTS'])+3)**.8)/(7.5 + .006*(elodiff))
+    
+    # win probability
+    prob_Win = 1/(1+ 10^((-elodiff)/400))
+    
+    if (team %in% teamELO_df$Team){
+    count = teamELO_df[teamELO_df$Team == as.character(team), 'times updated']
+    teamELONew = teamELO_df[teamELO_df$Team == as.character(team), 'ELO_Rating'] + 30*(MOV)*(win - prob_Win) + 40
+    teamELO_df[teamELO_df$Team == as.character(team), 'ELO_Rating'] = teamELONew
+    teamELO_df[teamELO_df$Team == as.character(team), 'times updated'] = count+1
+   } else{
+    teamELO_df[nrow(teamELO_df)+1, 'times updated'] = 1
+    teamELO_df[(nrow(teamELO_df)), 'ELO_Rating'] = 1540 +  30*(MOV)*(win - prob_Win)
+    teamELO_df[nrow(teamELO_df), 'Team'] = team
+    
+   }
+      for (row in 1:(nrow(TMNT)-1)) {
+      player = TMNT[row, 'player']
+      player_id = TMNT[row, 'player_id']
+      
+     if ((as.numeric(player_id)) %in% ELO_df$Player_ID){
+        eloOld = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'ELO_Rating']
+        TMNTelonew = eloOld + 30*(MOV)*(win - prob_Win) + TMNT[row, 'Net']/10
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'ELO_Rating'] = round(TMNTelonew, 3)
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'GOG_Change'] =  ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'GOG_Change'] + (TMNTelonew - eloOld)
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'times updated'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'times updated']+1
+
+         
+      } else { 
+        TMNTelonew = 1500 + 30*(MOV)*(win - prob_Win) + TMNT[row, 'Net']/10
+        ELO_df[(nrow(ELO_df) + 1), 'Team'] = team
+        ELO_df[nrow(ELO_df), 'ELO_Rating'] = round(TMNTelonew, 3)
+        ELO_df[nrow(ELO_df), 'Player'] = player
+        ELO_df[nrow(ELO_df), 'Player_ID'] = player_id
+        ELO_df[nrow(ELO_df), 'Season'] = season
+        ELO_df[nrow(ELO_df), 'GOG_Change'] = 0
+        ELO_df[nrow(ELO_df), 'times updated'] = 1
+        }
+    
+    }
+    
+    
+}
+  
+    
+    }, error = function(e){
+      print(paste("error", daily_schedule[val, 'game_id'], val, team, player)) 
+      empty_gameID[nrow(empty_gameID) + 1, 'game_id'] = daily_schedule[val, 'game_id']
+     empty_gameID[nrow(empty_gameID), 'reason'] = "timeout"
+   }, warning = function(w){
+      print("warning")
+      empty_gameID[nrow(empty_gameID) + 1, 'game_id'] = daily_schedule[val, 'game_id']
+      empty_gameID[nrow(empty_gameID), 'reason'] = "timeout"
+    })
+    
+   
+}
+    }
+
+backupDF = ELO_df
+backupTeam = teamELO_df
+increment = increment + 1
+}
+  
+TMNT %>% mutate(weighted_net = USG/10*Net)
+```
+
+```{r}
+x = (get_schedule(team = 'UNC', season = '2021-22') %>% filter(date > '2022-03-17'))$game_id
+
+game = get_boxscore(401408583)[['North Carolina']]
+
+for (game_id in x){
+  temp = get_boxscore(game_id)[['North Carolina']]
+  game = bind_rows(game, temp)
+}
+
+sum((drop_na(game) %>% group_by(player) %>% filter(player_id == '4431674' | player_id == '4277902' | player_id == '4395650' | player_id == '4433176' | player_id == '4433144') %>% mutate(avg_min = mean(MIN)) %>% summarize(sum(avg_min)) )$`sum(avg_min)`) / sum((drop_na(game) %>% group_by(player) %>% mutate(avg_min = mean(MIN)) %>% summarize(sum(avg_min)))$`sum(avg_min)`)
+
+playoffs = ((drop_na(game) %>% group_by(player) %>% filter(player_id == '4431674' | player_id == '4277902' | player_id == '4395650' | player_id == '4433176' | player_id == '4433144')  %>% summarize(mean(MIN))))
+
+playoffs[, 'season'] = 'Playoffs'
+
+results = bind_rows(reg_season, playoffs)
+
+write.csv(results, '/Users/matthewkearney/Documents/UNCbar.csv')
+library(ggplot2)
+
+```
+

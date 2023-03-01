@@ -1,0 +1,1441 @@
+---
+title: "Thesis Testing"
+output: html_document
+date: '2022-09-09'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+devtools::install_github("lbenz730/ncaahoopR")
+library(ncaahoopR)
+```
+
+```{r}
+daily_schedule = get_master_schedule("2015-11-13")
+get_roster(team = 'Arizona State')
+```
+
+
+```{r}
+temp_temp_df = data.frame()
+top10 = finalELOtakeNew_2015%>%slice(1:100) %>% mutate(MatchTeam = Team)
+top10= edit(left_join(top10, ids, by = c('Team' = 'team')))
+
+teams_2015 = left_join(top10, ids, by = c('MatchTeam' = 'team'))
+teams_2015 = teams_2015 %>% filter(Team != 'Ferris State')
+
+for (team in (teams_2015$MatchTeam)){
+temp_df = data.frame()
+schedule = get_schedule(team = team, season = '2014-15')
+opps = schedule$opponent
+date = schedule$date
+for (row in 1:nrow(finalELOtakeNew_2015)){
+  if (finalELOtakeNew_2015[row, 'Team'] %in% opps){
+    temp_df[nrow(temp_df) + 1, 'opponent'] = finalELOtakeNew_2015[row, 'Team']
+    temp_df[nrow(temp_df), 'rating'] = finalELOtakeNew_2015[row, 'ELO_Rating']
+    temp_df[nrow(temp_df), 'ranking'] = finalELOtakeNew_2015[row, 'ELOrank']
+    temp_df[nrow(temp_df), 'date'] = schedule %>% filter(opponent == as.character(finalELOtakeNew_2015[row, 'Team'])) %>% select(date)
+    temp_df[nrow(temp_df), 'KPomRating'] = as.numeric(plotdftakenew_2015 %>% filter(Team == as.character(finalELOtakeNew_2015[row, 'Team'])) %>% select(RankAdjEM))
+    #temp_df[nrow(temp_df), 'Times_Updated'] = sum((newFullELO2015 %>% filter(Team == as.character(newFullELO2015[row, 'Team'])))$`times updated`)/NROW((newFullELO2015 %>% filter(Team == as.character(newFullELO2015[row, 'Team'])))$`times updated`)
+  }
+}
+temp_df = temp_df %>% arrange(date) %>% replace(is.na(.), 0)
+avg_SOS = mean(temp_df$rating)
+avg_KP = mean(temp_df$KPomRating)
+temp_temp_df[nrow(temp_temp_df)+1, 'Team'] = team
+temp_temp_df[nrow(temp_temp_df), 'avgSOS'] = avg_SOS
+temp_temp_df[nrow(temp_temp_df), 'KPSOS'] = avg_KP
+
+
+}
+temp_temp_df = left_join(temp_temp_df, (top10 %>% select(Team, MatchTeam)), by = c('Team' = 'MatchTeam'))
+temp = left_join(temp_temp_df, finalELOtakeNew_2015, by = c('Team.y' = 'Team')) %>% select(Team.y, avgSOS, ELO_Rating, ELOrank, KPSOS) %>% rename(Team = Team.y)
+(left_join(temp, (kenpom2015 %>% select(TeamName, RankAdjEM, seed)), by = c('Team' = 'TeamName'))  %>% mutate(SOSrank = dense_rank(-avgSOS)) %>% mutate(KPSOSrank = dense_rank(KPSOS)) %>% arrange(ELOrank) %>% select(Team, ELO_Rating, ELOrank, SOSrank, KPSOSrank, RankAdjEM, seed) %>% rename(KPrank = RankAdjEM)) 
+finalELOtakeNew_2015 = finalELOtakeNew_2015 %>% mutate(ELOrank = dense_rank(-ELO_Rating))
+
+game_log_2015 %>% slice(1431, 1918) %>% mutate(homeAvgNet = homeAvgORTG - homeAvgDRTG) %>% mutate(homeUpdate = -awayUpdate) %>% select(date, home_team, homeELO, homeAvgNet, homeUpdate, away_team, awayELO)
+
+```
+
+
+```{r}
+
+
+missingDatesDF = data.frame(matrix(nrow = 0, ncol = 5))
+eloCols = c("Date", "Team","Opponent", 'Game_ID' , 'Location')
+colnames(missingDatesDF) = eloCols
+
+for (team in ids$team) {
+  tryCatch({
+  schedule = get_schedule(team = team, season = '2017-18')
+  for (row in 1:nrow(schedule)){
+    missingDatesDF[nrow(missingDatesDF) + 1, 'Date'] = schedule[row, 'date']
+    missingDatesDF[nrow(missingDatesDF), 'Team'] = team
+    missingDatesDF[nrow(missingDatesDF), 'Opponent'] = schedule[row, 'opponent']
+    missingDatesDF[nrow(missingDatesDF), 'Game_ID'] = schedule[row, 'location']
+    missingDatesDF[nrow(missingDatesDF), 'Location'] = schedule[row, 'location']
+  }
+  }, error = function(e){
+    backup = missingDatesDF
+    paste("start with" , as.character(team))
+    break()
+  })
+}
+
+missingDatesDF  = missingDatesDF %>% mutate(Date_Real = (as.Date(Date,  origin ="1970-01-01"))) %>% select(-Date)%>% rename(Date = Date_Real)
+
+as.Date(missingDatesDF[64,'Date'],  origin ="1970-01-01") 
+
+finalELOtake3_2019 %>% summarize(mean(ELO_Rating))
+get_schedule(team = 'Purdue', season = '2016-17')
+
+game_log_2016_2 %>% filter(home_team == 'Oklahoma' | away_team == 'Oklahoma')
+
+newFullELO2016_2 %>% filter(Team == 'Oklahoma')
+```
+
+```{r}
+dates = seq(as.Date("2022-11-07"), as.Date("2023-02-26"), by="days")
+  #remove null dates from vector
+  dates = dates[! dates %in% as.Date(c("2022-12-24", '2022-12-26','2014-12-21','2014-12-22','2014-12-23','2021-12-28','2016-11-22','2016-11-26'))]
+  split = split(dates, ceiling(seq_along(dates)/2))
+  
+  
+```
+
+```{r}
+rm(ELO_df)
+rm(empty_gameID)
+
+ELO_df = data.frame(matrix(nrow = 0, ncol = 6))
+eloCols = c("Team","Player" , "Player_ID", 'ELO_Rating', 'Season', 'GOG_Change')
+colnames(ELO_df) = eloCols
+
+game_log = data.frame()
+team_games_played = data.frame()
+empty_gameID = data.frame()
+increment = 1
+```
+
+```{r}
+# Loop to assign boxscore to team
+season = '2018-2019'
+dates = c("2018-11-06", "2018-11-07", "2018-11-08", "2018-11-09")
+
+daily_schedule = get_master_schedule("2022-11-07")
+calc_ELO_per_season(dates)
+
+increment = 1
+
+get_boxscore(401084650)
+get_master_schedule('2018-11-11')
+ELO_historical = fullELO_2018_2
+fullELO_2017_take2['Season'] = '2016-17'
+TMNT
+
+write.csv(newFullELO2016_2, '/Users/matthewkearney/Documents/newFullELO2016_2.csv')
+get_schedule(team = 'Duke', season = '2017-18')
+```
+
+
+```{r}
+home_teams = (game_log_2018_4 %>% group_by(home_team) %>% summarize(Team = min(home_team)) %>% select(Team))
+away_teams = (game_log_2018_4 %>% group_by(away_team) %>% summarize(Team = min(away_team)) %>% select(Team))
+teams = bind_rows(home_teams, away_teams) %>% group_by(Team) %>% summarize(Team = min(Team)) %>% select(Team)
+
+opponent_ranks = data.frame()
+opponent_test = data.frame()
+opp_games = data.frame()
+netRankDF = data.frame()
+#uh = finalELOtakeNew_2018_4 %>% filter(Team != 'Limestone') %>% filter(Team != 'William Jewell') %>% filter(Team != 'Peru State College')
+
+for (team in teams$Team){
+  print(team)
+  opponents = distinct(game_log_2018_4) %>% filter(home_team == team | away_team == team) %>% mutate(opponent = case_when(home_team == team ~ away_team, away_team ==  team ~ home_team))%>% group_by(opponent) %>% summarize(Team = min(opponent)) %>% select(Team)
+  opp_games[nrow(opp_games) + 1, 'Team'] = team
+opp_games[nrow(opp_games), 'Games'] = nrow(opponents)
+}
+teams = left_join(teams, opp_games) %>% filter(Games>7)
+
+
+pb = txtProgressBar(min = 0, max = nrow(teams), initial = 0) 
+
+for(row in 1:nrow(teams)){
+  team = as.character(teams[row, 'Team'])
+teamMeanNet = distinct(game_log_2016_2) %>% filter(home_team == team | away_team == team) %>% mutate(netTotal = case_when(home_team == team ~ homeAvgNet, away_team ==  team ~ awayAvgNet)) %>% summarize(mean(netTotal))
+teamMeanORtg = distinct(game_log_2018_4) %>% filter(home_team == team | away_team == team) %>% mutate(ORtg = case_when(home_team == team ~ homeAvgORTG, away_team ==  team ~ awayAvgORTG)) %>% summarize(mean(ORtg))
+teamMeanDRtg = distinct(game_log_2018_4) %>% filter(home_team == team | away_team == team) %>% mutate(DRtg = case_when(home_team == team ~ homeAvgDRTG, away_team ==  team ~ awayAvgDRTG)) %>% summarize(mean(DRtg))
+
+
+netRankDF[nrow(netRankDF) + 1, 'Team'] = team
+netRankDF[nrow(netRankDF), 'Net'] = teamMeanNet
+netRankDF[nrow(netRankDF), 'ORtg'] = teamMeanORtg
+netRankDF[nrow(netRankDF), 'DRtg'] = teamMeanDRtg
+setTxtProgressBar(pb,row)
+}
+close(pb)
+
+netRankDF[rowSums(is.na(netRankDF)) > 0,]
+netRankDF = netRankDF %>% filter(Team != 'Houston Christian')
+teams = inner_join(teams, netRankDF)
+
+teams = teams %>% mutate(NetRank = dense_rank(-Net)) %>% arrange(NetRank) %>% mutate(ORtgRank = dense_rank(-ORtg)) %>% mutate(DRtgRank = dense_rank(DRtg)) %>% arrange(DRtgRank)
+
+
+for(row in 1:nrow(teams)){
+  team = as.character(teams[row, 'Team'])
+opponents = distinct(game_log_2018_4) %>% filter(home_team == team | away_team == team) %>% mutate(opponent = case_when(home_team == team ~ away_team, away_team ==  team ~ home_team)) %>% mutate(opponentELO = case_when(home_team == team ~ awayELO, away_team ==  team ~ homeELO))
+opponent_test = data.frame()
+for (row in 1:nrow(opponents)){
+  opponent_test[nrow(opponent_test) + 1, 'Team'] = opponents[row, 'opponent']
+opponent_test[nrow(opponent_test), 'ELOatGame'] = opponents[row, 'opponentELO']
+opponent_test[nrow(opponent_test), 'gamenum'] = row
+
+}
+x = as.numeric(left_join(opponent_test, finalELOtakeNew_2018_4, by = c('Team' = 'Team')) %>% mutate(ELOdiffReal = ELOatGame-ELO_Rating) %>% summarise(mean(ELOdiffReal)))
+y =  as.numeric(left_join(opponent_test, finalELOtakeNew_2018_4, by = c('Team' = 'Team'))  %>% summarise(mean(ELO_Rating)))
+opponents = opponents %>% select(opponent) %>% rename(Team = opponent)
+combined = inner_join(teams, opponents, by = c('Team' = 'Team')) %>% summarise(across(c(ORtgRank, DRtgRank, NetRank), mean))
+opponent_ranks[nrow(opponent_ranks) + 1, 'Team'] = team
+opponent_ranks[nrow(opponent_ranks), 'OppORtgRank'] = combined$ORtgRank
+opponent_ranks[nrow(opponent_ranks), 'OppDRtgRank'] = combined$DRtgRank
+opponent_ranks[nrow(opponent_ranks), 'OppNetRank'] = combined$NetRank
+opponent_ranks[nrow(opponent_ranks), 'OppELOatGame'] = (opponent_test %>% summarise(mean(ELOatGame)))
+opponent_ranks[nrow(opponent_ranks), 'OppFinalELO'] = y
+opponent_ranks[nrow(opponent_ranks), 'EloDiff'] = x
+opponent_ranks[nrow(opponent_ranks), 'Games'] = nrow(opponents)
+setTxtProgressBar(pb,row)
+}
+
+
+
+x = left_join(finalELOtakeNew_2016_2, (opponent_ranks %>% filter(Games>5) %>% mutate(OppNetRank = dense_rank(OppNetRank)))) %>% arrange(ELOrank) %>% select(Team, ELO_Rating, ELOrank, OppNetRank, OppELOatGame, OppFinalELO, EloDiff, Games)
+# %>% mutate(test = ELO_Rating/((realNetRank)^(1/150))) %>% arrange(-test)
+
+left_join(x, kenpom2016condense, by = c('Team' = 'TeamName')) %>% rename(KPrank = RankAdjEM)
+
+SOSrank = opponent_ranks %>% filter(Games>5) %>% mutate(SOSrank = dense_rank(-ELOatGame)) %>% arrange(SOSrank) %>% select(Team, SOSrank)
+SOSrank[, 'KPSOS'] = 0
+
+
+netRankDF %>% mutate(netrank = dense_rank(-Net)) %>% arrange(netrank)
+
+opponent_test %>% summarise(mean(ELOatGame))
+
+x = left_join(plotdftakenew_2018_4, SOSrank) %>% select(Team, ELO_Rating, ELOrank, RankAdjEM, SOSrank, KPSOS, seed) %>% rename(KPrank = RankAdjEM)
+edit(x)
+
+```
+
+```{r}
+ELO_df = backupDF
+game_log = game_log_backup
+```
+
+
+```{r}
+library(tidyr)
+library(ncaahoopR)
+for (x in 1:NROW(split)){
+  for (date in 1:2){
+    print(split[[increment]][date])
+    print(increment)
+    daily_schedule = get_master_schedule(as.character(split[[as.integer(increment)]][date]))
+    na = c(which(is.na(daily_schedule$game_id), arr.ind = TRUE))
+      for (x in na){
+        empty_gameID[nrow(empty_gameID) + 1, 'date'] = dates[date]
+        empty_gameID[nrow(empty_gameID), 'home_team'] = trimws(daily_schedule[x, 'home'], whitespace = "[\\h\\v]")
+        empty_gameID[nrow(empty_gameID), 'away_team'] = trimws(daily_schedule[x, 'away'], whitespace = "[\\h\\v]")
+        empty_gameID[nrow(empty_gameID), 'reason'] = "N/A ID"
+      }
+    if (sum(is.na(daily_schedule$game_id)) > 0){
+    daily_schedule = daily_schedule[-na, ]
+    }
+  
+
+  
+  for (val in 1:(nrow(daily_schedule))){
+   tryCatch({
+    id = get_boxscore(daily_schedule[val, 'game_id'])
+    team = daily_schedule[val, 'home']
+    team = trimws(team, whitespace = "[\\h\\v]")
+    TMNT = id[[team]]
+    TMNT[,5:6] = sapply(TMNT[, 5:6], as.numeric)
+    TMNT[,1] = sapply(TMNT[, 1], as.numeric)
+    TMNTtotOReb = sum(TMNT[1:nrow(TMNT)-1, 'OREB'])
+    TMNTtotDReb = sum(TMNT[1:nrow(TMNT)-1, 'DREB'])
+    if(team %in% team_games_played$Team){
+      team_games_played[team_games_played$Team == as.numeric(team), 'games_played'] = team_games_played[team_games_played$Team == as.numeric(team), 'games_played'] + 1
+      }else {
+      team_games_played[nrow(team_games_played)+1, 'Team'] = team
+      team_games_played[nrow(team_games_played), 'games_played'] = 1
+    }
+    opponent = trimws(daily_schedule[val, 'away'], whitespace = "[\\h\\v]")
+    OPP = id[[opponent]]
+    OPP[,5:6] = sapply(OPP[, 5:6], as.numeric)
+    OPP[,1] = sapply(OPP[, 1], as.numeric)
+    OPPtotDReb = sum(OPP[1:nrow(OPP)-1, 'DREB'])
+    OPPtotOReb = sum(OPP[1:nrow(OPP)-1, 'OREB'])
+    if(opponent %in% team_games_played$Team){
+      team_games_played[team_games_played$Team == as.numeric(opponent), 'games_played'] = team_games_played[team_games_played$Team == as.numeric(opponent), 'games_played'] + 1
+      }else {
+      team_games_played[nrow(team_games_played)+1, 'Team'] = opponent
+      team_games_played[nrow(team_games_played), 'games_played'] = 1
+    }    
+    drop = c()
+    TMNT[nrow(TMNT), 'MIN'] = sum(TMNT[1:(nrow(TMNT)-1), 'MIN'])
+    if (is.na(sum(TMNT[1:(nrow(TMNT)-1), 'MIN'])) | sum(TMNT[1:(nrow(TMNT)-1), 'MIN']) == 0) {  
+      empty_gameID[(nrow(empty_gameID)+1), 'reason'] = "invalid DF"
+      empty_gameID[nrow(empty_gameID), 'game_id'] = daily_schedule[val, 'game_id']
+      
+    } else {
+    for (row in 1:(nrow(TMNT)-1)){
+      if (TMNT[row, 'MIN'] < 10){
+        drop = c(drop, row)
+      }
+    }
+      if (sum(drop) > 0){
+      TMNT = TMNT[-drop,]
+      }
+    # Offensive Rating
+
+      
+      if(is.na(TMNT[nrow(TMNT), 'FTM']/TMNT[nrow(TMNT), 'FTA']) == TRUE){
+          teamFTP = 0
+        }else{
+          teamFTP = TMNT[nrow(TMNT), 'FTM']/TMNT[nrow(TMNT), 'FTA']
+        }
+      
+      # Team Scoring Possession
+        TeamSCPoss = (TMNT[nrow(TMNT), 'FGM']) + (1 - (1 - teamFTP)^2)*TMNT[nrow(TMNT), 'FTA']*0.4
+        
+      # Team Play %
+      TeamPlayPercent = TeamSCPoss/(TMNT[nrow(TMNT), 'FGA'] + TMNT[nrow(TMNT), 'FTA']*.4 + TMNT[nrow(TMNT), 'TO'])
+      
+    for (row in 1:(nrow(TMNT)-1)) {
+       # Basic stats
+      playerOREB = TMNT[row, 'OREB']
+      
+        percentMP = TMNT[row, 'MIN']/(TMNT[nrow(TMNT), 'MIN']/5)
+        if(is.na(TMNT[row, 'FTM']/TMNT[row, 'FTA']) == TRUE){
+          freeThrowPercent = 0
+        }else{
+          freeThrowPercent = TMNT[row, 'FTM']/TMNT[row, 'FTA']
+        }
+        
+        
+
+
+        # qAST
+        qAST = (percentMP*(1.14*((TMNT[nrow(TMNT), 'AST']-TMNT[row, 'AST'])/TMNT[nrow(TMNT), 'FGM']))) + ((((TMNT[nrow(TMNT), 'AST']/TMNT[nrow(TMNT), 'MIN'])*TMNT[row, 'MIN']*5-TMNT[row, 'AST'])/((TMNT[nrow(TMNT), 'FGM']/TMNT[nrow(TMNT), 'MIN'])*TMNT[row, 'MIN']*5-TMNT[row, 'FGM']))*(1-percentMP))
+    
+        # Field Goal Part
+        FGPart = TMNT[row, 'FGM']*(1. - 0.5*((TMNT[row, 'PTS']-TMNT[row, 'FTM'])/(2.*TMNT[row, 'FGA']))*qAST)
+    
+        # Assist Part
+        ASTPart = 0.5*(((TMNT[nrow(TMNT), 'PTS'] - TMNT[nrow(TMNT), 'FTM']) - (TMNT[row, 'PTS']-TMNT[row, 'FTM']))/(2*(TMNT[nrow(TMNT), 'FGA'] - TMNT[row, 'FGA'])))*TMNT[row, 'AST']
+        
+        # Free Throw Part
+        FTPart = (1 - (1 - (freeThrowPercent))^2)*0.4*TMNT[row, 'FTA']
+        
+        # Team OREB%
+        TeamOREBPercent = TMNTtotOReb/(TMNTtotOReb + ((sum(OPP[1:nrow(OPP)-1, 'REB']))-sum(OPP[1:nrow(OPP)-1, 'OREB'])))
+        
+        # Team OREB Weight
+        TeamOREBWeight = ((1. - TeamOREBPercent)*TeamPlayPercent)/((1. - TeamOREBPercent)*TeamPlayPercent +TeamOREBPercent*(1-TeamPlayPercent))
+        
+        # OREB Part
+        OREBPart = playerOREB*TeamOREBWeight*TeamPlayPercent
+        
+        # Scoring Possession
+        SCPoss = (FGPart + ASTPart + FTPart)*(1-(TMNTtotOReb/TeamSCPoss)*(TeamOREBWeight*TeamPlayPercent)) + OREBPart
+    
+        #FG per Possession
+        FGxPoss = (TMNT[row, 'FGA'] - TMNT[row, 'FGM'])*(1-1.07*TeamOREBPercent)
+        
+        # FT Per Possession
+        FTxPoss = ((1 - freeThrowPercent)^2)*0.4*TMNT[row, 'FTA']
+        
+        # Total Possessions
+        TotPoss = SCPoss + FGxPoss + FTxPoss + TMNT[row, 'TO']
+        
+        # Points Produced - Field Goals
+        PProdFGPart = 2*(TMNT[row, 'FGM'] + 0.5*TMNT[row, '3PTM']) * (1-0.5*((TMNT[row, 'PTS'] - TMNT[row, 'FTM'])/(2*TMNT[row, 'FGA']))*qAST)
+        if (is.na(PProdFGPart) == TRUE){
+          PProdFGPart = 0
+        }
+        
+        # Points Produced - OREBs
+        PProdOREBPart = playerOREB * TeamOREBWeight*TeamPlayPercent*((TMNT[nrow(TMNT), 'PTS'])/(TMNT[nrow(TMNT), 'FGM']+(1.-(1.-teamFTP)^2)*.4*TMNT[nrow(TMNT), 'FTA']))
+        if (is.na(PProdOREBPart) == TRUE){
+          PProdOREBPart = 0
+        }
+        
+        #Points Produced - Assists
+        PProdASTPart = 2*((TMNT[nrow(TMNT), 'FGM'] - TMNT[row, 'FGM'] + .5*(TMNT[nrow(TMNT), '3PTM']-TMNT[row, '3PTM']))/(TMNT[nrow(TMNT), 'FGM'] - TMNT[row, 'FGM']))*0.5*(((TMNT[nrow(TMNT), 'PTS'] - TMNT[nrow(TMNT), 'FTM']) - (TMNT[row, 'PTS']-TMNT[row, 'FTM']))/(2*(TMNT[nrow(TMNT), 'FGA']-TMNT[row, 'FGA'])))*TMNT[row, 'AST']
+        if (is.na(PProdASTPart) == TRUE){
+          PProdASTPart = 0
+        }
+        
+        #Total Points Produced
+        PProd = (PProdFGPart + PProdASTPart + TMNT[row, 'FTM'])*(1.-(TMNTtotOReb/TeamSCPoss)*TeamOREBWeight*TeamPlayPercent) + PProdOREBPart
+        if (is.na(PProd) == TRUE){
+          PProd = 0
+        }
+        
+        # ORTG
+        ORTG = 100*(PProd / TotPoss)
+        TMNT[row, 'ORtg'] = ORTG
+        TMNT[row, 'TotPoss'] = TotPoss
+        
+        
+    }
+    TMNT[nrow(TMNT), 'ORtg'] = 0
+    
+    ## Drop Rows with NA ORTG
+    TMNT = TMNT[!is.na(TMNT$ORtg),]
+    TMNT[nrow(TMNT), 'ORtg'] = sum(TMNT[, 'ORtg'])/(nrow(TMNT)-1)
+
+    #### Defensive Rating
+
+    totalPoss = 0.5 * ((TMNT[nrow(TMNT), 'FGA'] + 0.4 * TMNT[nrow(TMNT), 'FTA'] - 1.07*(TMNTtotOReb / (TMNTtotOReb + OPPtotDReb)) * (TMNT[nrow(TMNT), 'FGA'] - TMNT[nrow(TMNT), 'FGM']) + TMNT[nrow(TMNT), 'TO']) + (OPP[nrow(OPP), 'FGA'] + 0.4*OPP[nrow(OPP), 'FTA'] - 1.07*(OPPtotOReb / (OPPtotOReb + OPPtotDReb)) * (OPP[nrow(OPP), 'FGA'] - OPP[nrow(OPP), 'FGM']) + OPP[nrow(OPP), 'TO']))
+    
+    DFGPercent= OPP[nrow(OPP), 'FGM']/OPP[nrow(OPP), 'FGA']
+    DORPercent = OPPtotOReb / (OPPtotOReb + TMNTtotDReb)
+    FMwt = (DFGPercent * (1-DORPercent)) / (DFGPercent * (1- DORPercent) + (1-DFGPercent)* DORPercent)
+    oppFTPercent = OPP[nrow(OPP), 'FTM']/OPP[nrow(OPP), 'FTA']
+    if (is.na(oppFTPercent)){
+      oppFTPercent = 0
+    }
+    
+    Team_Def_Rating = 100 * (OPP[nrow(OPP), 'PTS']/totalPoss)
+    D_PTS_per_ScPoss = OPP[nrow(OPP), 'PTS']/(OPP[nrow(OPP), 'FGM'] + (1 - (1 - (oppFTPercent))**2)  * OPP[nrow(OPP), 'FTA']*.4)
+    
+    for (row in 1:(nrow(TMNT)-1)) {
+      Stops1 = TMNT[row, 'STL'] + TMNT[row, 'BLK'] * FMwt * (1 - 1.07 * DORPercent) + TMNT[row, 'DREB'] * (1 - FMwt)
+      Stops2 = (((OPP[nrow(OPP), 'FGA']-OPP[nrow(OPP), 'FGM'] - TMNT[nrow(TMNT), 'BLK'])/ TMNT[nrow(TMNT), 'MIN']) * FMwt * (1 - 1.07 * DORPercent) + ((OPP[nrow(OPP), 'TO'] - TMNT[nrow(TMNT), 'STL']) / TMNT[nrow(TMNT), 'MIN'])) * TMNT[row, 'MIN'] + (TMNT[row, 'PF']/TMNT[nrow(TMNT), 'PF']) * 0.4 * OPP[nrow(OPP), 'FTA'] * (1 - ( oppFTPercent))**2
+      if (is.na(Stops2) == TRUE){
+          Stops2 = 0
+        }
+      Stops = Stops1 + Stops2
+      StopPercent = (Stops * sum(OPP[1:nrow(OPP)-1, 'MIN'])) / (totalPoss * TMNT[row, 'MIN'])
+      
+      DRtg = Team_Def_Rating + 0.2 * (100 * D_PTS_per_ScPoss * (1 - StopPercent) - Team_Def_Rating)
+      TMNT[row, 'DRtg'] = DRtg
+    }
+    
+#### Net Rating
+    for (row in 1:(nrow(TMNT)-1)) {
+      TMNT[row, 'USG'] = 100* ((TMNT[row, 'FGA'] + 0.44*TMNT[row, 'FTA'] + TMNT[row, 'TO']) * (TMNT[nrow(TMNT), 'MIN']/5)) / (TMNT[row, 'MIN']* (TMNT[nrow(TMNT), 'FGA'] + 0.44*TMNT[nrow(TMNT), 'FTA'] + TMNT[nrow(TMNT), 'TO']))
+      TMNT[row, 'Net'] = TMNT[row, 'ORtg'] - TMNT[row, 'DRtg']
+      net = TMNT[row, 'ORtg'] - TMNT[row, 'DRtg']
+      
+    }
+    TMNT = TMNT %>% mutate(weighted_net = ((USG*(0.8))*Net)/50)
+        #### ELO Rating
+    
+    #Check if ELO needs to be set or grab avg elo
+    
+    if (team %in% ELO_df$Team & opponent %in% ELO_df$Team){
+        temp_ids = (drop_na(TMNT %>% filter('MIN' > 10)))$player_id
+        
+        avgTMNTelo = sum(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'ELO_Rating']) / as.numeric(NROW(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'ELO_Rating'])) + 40
+        test_avgTMNTelo = sum(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'test_ELO_Rating']) / as.numeric(NROW(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'test_ELO_Rating'])) + 40
+        if (is.na(avgTMNTelo)){
+          avgTMNTelo = sum(ELO_df[which(ELO_df$Team == team ), 'ELO_Rating']) / sum(ELO_df$Team == team) + 40
+        }
+        if (is.na(test_avgTMNTelo)){
+          test_avgTMNTelo = sum(ELO_df[which(ELO_df$Team == team ), 'test_ELO_Rating']) / sum(ELO_df$Team == team) + 40
+        }
+        TMNTelo = avgTMNTelo 
+        test_TMNTelo = test_avgTMNTelo
+        
+        temp_ids = (drop_na(OPP %>% filter('MIN' > 10)))$player_id
+        
+        avgOPPelo = sum(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'ELO_Rating']) / as.numeric(NROW(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'ELO_Rating']))
+       test_avgOPPelo = sum(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'test_ELO_Rating']) / as.numeric(NROW(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'test_ELO_Rating'])) + 40
+        if (is.na(avgOPPelo)){
+          avgOPPelo = sum(ELO_df[which(ELO_df$Team == team ), 'ELO_Rating']) / sum(ELO_df$Team == team) + 40
+        }
+        if (is.na(test_avgOPPelo)){
+          test_avgOPPelo = sum(ELO_df[which(ELO_df$Team == team ), 'test_ELO_Rating']) / sum(ELO_df$Team == team) + 40
+        }
+        OPPelo = avgOPPelo
+        test_OPPelo = test_avgOPPelo
+        
+        
+      } else if (team %in% ELO_df$Team & !(opponent %in% ELO_df$Team)){
+        
+        temp_ids = (drop_na(TMNT %>% filter('MIN' > 10)))$player_id
+        
+         avgTMNTelo = sum(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'ELO_Rating']) / as.numeric(NROW(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'ELO_Rating'])) + 40
+        test_avgTMNTelo = sum(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'test_ELO_Rating']) / as.numeric(NROW(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'test_ELO_Rating'])) + 40
+        if (is.na(avgTMNTelo)){
+          avgTMNTelo = sum(ELO_df[which(ELO_df$Team == team ), 'ELO_Rating']) / sum(ELO_df$Team == team) + 40
+        }
+        if (is.na(test_avgTMNTelo)){
+          test_avgTMNTelo = sum(ELO_df[which(ELO_df$Team == team ), 'test_ELO_Rating']) / sum(ELO_df$Team == team) + 40
+        }
+        TMNTelo = avgTMNTelo 
+        test_TMNTelo = test_avgTMNTelo
+        
+        OPPelo = 1500
+      } else if (opponent %in% ELO_df$Team & !(team %in% ELO_df$Team)) {
+        TMNTelo = 1540
+        temp_ids = (drop_na(OPP %>% filter('MIN' > 10)))$player_id
+        avgOPPelo = sum(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'ELO_Rating']) / as.numeric(NROW(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'ELO_Rating']))
+        test_avgOPPelo = sum(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'test_ELO_Rating']) / as.numeric(NROW(ELO_df[(ELO_df$Player_ID %in% temp_ids), 'test_ELO_Rating'])) + 40
+        if (is.na(avgOPPelo)){
+          avgOPPelo = sum(ELO_df[which(ELO_df$Team == team ), 'ELO_Rating']) / sum(ELO_df$Team == team) + 40
+        }
+        if (is.na(test_avgOPPelo)){
+          test_avgOPPelo = sum(ELO_df[which(ELO_df$Team == team ), 'test_ELO_Rating']) / sum(ELO_df$Team == team) + 40
+        }
+        OPPelo = avgOPPelo
+        test_OPPelo = test_avgOPPelo
+      } else {
+        TMNTelo = 1540 
+        OPPelo = 1500 
+        avgTMNTelo = TMNTelo
+        avgOPPelo = OPPelo
+        test_TMNTelo = TMNTelo
+        test_OPPelo = OPPelo
+      }
+    home_court = 40
+
+    # calc if team won
+    if (TMNT[nrow(TMNT), 'PTS']-OPP[nrow(OPP), 'PTS'] > 0){
+      win = 1
+      oppWin = 0
+      elodiff = TMNTelo - OPPelo
+      test_elodiff = test_TMNTelo - test_OPPelo
+    } else{
+      win = 0
+      oppWin = 1
+      elodiff = OPPelo - TMNTelo
+      test_elodiff = test_OPPelo - test_TMNTelo
+    }
+      # calc MOV, account for home advantage
+    MOV = ((abs(TMNT[nrow(TMNT), 'PTS']-OPP[nrow(OPP), 'PTS'])+3)**.8)/(7.5 + .006*(elodiff))
+    test_MOV = ((abs(TMNT[nrow(TMNT), 'PTS']-OPP[nrow(OPP), 'PTS'])+3)**.8)/(7.5 + .006*(test_elodiff))
+
+    # win probability
+    prob_Win = 1/(1+ 10^(-(TMNTelo - OPPelo)/400))
+    oppProb = 1/(1+ 10^((TMNTelo - OPPelo)/400))
+    test_prob_Win = 1/(1+ 10^(-(test_TMNTelo - test_OPPelo)/400))
+    test_oppProb = 1/(1+ 10^((test_TMNTelo - test_OPPelo)/400))
+    
+    
+    
+    game_log[nrow(game_log) + 1, 'Game_ID'] = daily_schedule[val, 'game_id']
+    game_log[nrow(game_log), 'date'] = (split[[increment]][date])
+    game_log[nrow(game_log), 'home_team'] = team
+    game_log[nrow(game_log), 'homeELO'] = TMNTelo
+    game_log[nrow(game_log), 'test_homeELO'] = test_TMNTelo
+    game_log[nrow(game_log), 'homeAvgORTG'] = as.numeric(TMNT %>% summarize(mean(ORtg)))
+    game_log[nrow(game_log), 'homeAvgDRTG'] = as.numeric(drop_na(TMNT) %>% summarize(mean(DRtg)))
+    game_log[nrow(game_log), 'homeUpdate'] = as.numeric(30*(MOV)*(win - prob_Win))
+    game_log[nrow(game_log), 'test_homeUpdate'] = as.numeric(30*(test_MOV)*(win - test_prob_Win))
+    game_log[nrow(game_log), 'away_team'] = opponent
+    game_log[nrow(game_log), 'awayELO'] = OPPelo
+    game_log[nrow(game_log), 'test_awayELO'] = test_OPPelo
+    game_log[nrow(game_log), 'awayUpdate'] = as.numeric(30*(MOV)*(oppWin - oppProb))
+    game_log[nrow(game_log), 'test_awayUpdate'] = as.numeric(30*(test_MOV)*(oppWin - test_oppProb))
+
+
+  #  #rolling rating
+#for(row in 1:(nrow(TMNT)-1)) {
+#      player = TMNT[row, 'player']
+#      player_id = TMNT[row, 'player_id']
+#       if ((as.numeric(player_id)) %in% ELO_historical$Player_ID & !((as.numeric(player_id)) %in% ELO_df$Player_ID)){
+#        eloOld = (ELO_historical[ELO_historical$Player_ID == as.numeric(player_id), 'ELO_Rating'])*.9 + 1500*.1
+#        TMNTelonew = eloOld
+#         ELO_df[(nrow(ELO_df) + 1), 'Team'] = team
+#        ELO_df[nrow(ELO_df), 'ELO_Rating'] = round(TMNTelonew, 3)
+#        ELO_df[nrow(ELO_df), 'Player'] = player
+#        ELO_df[nrow(ELO_df), 'Player_ID'] = player_id
+#        ELO_df[nrow(ELO_df), 'Season'] = season
+#        ELO_df[nrow(ELO_df), 'GOG_Change'] = 0
+#        ELO_df[nrow(ELO_df), 'times updated'] = 0
+#       } 
+# }
+    
+      for (row in 1:(nrow(TMNT)-1)) {
+      player = TMNT[row, 'player']
+      player_id = TMNT[row, 'player_id']
+      
+     if ((as.numeric(player_id)) %in% ELO_df$Player_ID){
+        eloOld = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'ELO_Rating']
+        test_eloOld = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'test_ELO_Rating']
+        TMNTelonew = eloOld + 30*(MOV)*(win - prob_Win) + TMNT[row, 'Net']/10
+        test_TMNTelonew = test_eloOld + 30*(test_MOV)*(win - test_prob_Win)+ (TMNT[row, 'weighted_net'])*0.8
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'ELO_Rating'] = round(TMNTelonew, 3)
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'test_ELO_Rating'] = round(test_TMNTelonew, 3)
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'GOG_Change'] =  ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'GOG_Change'] + (TMNTelonew - eloOld)
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'times updated'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'times updated']+1
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalNet'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalNet'] + TMNT[row, 'Net']/10
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalNetWeighted'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalNetWeighted'] + (TMNT[row, 'weighted_net'])*0.8
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalORtg'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalORtg'] + TMNT[row, 'ORtg']
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalDRtg'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalDRtg'] + TMNT[row, 'DRtg']
+ 
+                
+      } else { 
+        TMNTelonew = (((avgTMNTelo - home_court) * 0.6) + (1500*.4)) + 40*(MOV)*(win - prob_Win) + TMNT[row, 'Net']/10
+        TMNTelotest = (((test_TMNTelo - home_court) * 0.6) + (1500*.4)) + 30*(test_MOV)*(win - test_prob_Win) + (TMNT[row, 'weighted_net'])*0.8
+        ELO_df[(nrow(ELO_df) + 1), 'Team'] = team
+        ELO_df[nrow(ELO_df), 'ELO_Rating'] = round(TMNTelonew, 3)
+        ELO_df[nrow(ELO_df), 'test_ELO_Rating'] = round(TMNTelotest, 3)
+        ELO_df[nrow(ELO_df), 'Player'] = player
+        ELO_df[nrow(ELO_df), 'Player_ID'] = player_id
+        ELO_df[nrow(ELO_df), 'Season'] = season
+        ELO_df[nrow(ELO_df), 'totalNet'] = TMNT[row, 'Net']/10
+        ELO_df[nrow(ELO_df), 'totalNetWeighted'] = (TMNT[row, 'weighted_net'])*0.8
+        ELO_df[nrow(ELO_df), 'totalORtg'] = TMNT[row, 'ORtg']
+        ELO_df[nrow(ELO_df), 'totalDRtg'] = TMNT[row, 'DRtg']
+        ELO_df[nrow(ELO_df), 'GOG_Change'] = 0
+        ELO_df[nrow(ELO_df), 'times updated'] = 1
+        }
+    
+      }
+
+
+    
+    #AWAY TEAM ELO
+    team = daily_schedule[val, 'away']
+    team = trimws(team, whitespace = "[\\h\\v]")
+    TMNT = id[[team]]
+    TMNT[,5:6] = sapply(TMNT[, 5:6], as.numeric)
+    TMNT[,1] = sapply(TMNT[, 1], as.numeric)
+    TMNTtotOReb = sum(TMNT[1:nrow(TMNT)-1, 'OREB'])
+    TMNTtotDReb = sum(TMNT[1:nrow(TMNT)-1, 'DREB'])
+    opponent = trimws(daily_schedule[val, 'home'], whitespace = "[\\h\\v]")
+    OPP = id[[opponent]]
+    OPP[,5:6] = sapply(OPP[, 5:6], as.numeric)
+    OPP[,1] = sapply(OPP[, 1], as.numeric)
+    OPPtotDReb = sum(OPP[1:nrow(OPP)-1, 'DREB'])
+    OPPtotOReb = sum(OPP[1:nrow(OPP)-1, 'OREB'])
+    drop = c()
+    TMNT[nrow(TMNT), 'MIN'] = sum(TMNT[1:(nrow(TMNT)-1), 'MIN'])
+    for (row in 1:(nrow(TMNT)-1)){
+      if (TMNT[row, 'MIN'] < 10){
+        drop = c(drop, row)
+      }
+    }
+      if (sum(drop) > 0){
+      TMNT = TMNT[-drop,]
+      }
+    # Offensive Rating
+
+      
+      if(is.na(TMNT[nrow(TMNT), 'FTM']/TMNT[nrow(TMNT), 'FTA']) == TRUE){
+          teamFTP = 0
+        }else{
+          teamFTP = TMNT[nrow(TMNT), 'FTM']/TMNT[nrow(TMNT), 'FTA']
+        }
+      
+      # Team Scoring Possession
+        TeamSCPoss = (TMNT[nrow(TMNT), 'FGM']) + (1 - (1 - teamFTP)^2)*TMNT[nrow(TMNT), 'FTA']*0.4
+        
+      # Team Play %
+      TeamPlayPercent = TeamSCPoss/(TMNT[nrow(TMNT), 'FGA'] + TMNT[nrow(TMNT), 'FTA']*.4 + TMNT[nrow(TMNT), 'TO'])
+      
+    for (row in 1:(nrow(TMNT)-1)) {
+       # Basic stats
+      playerOREB = TMNT[row, 'OREB']
+      
+        percentMP = TMNT[row, 'MIN']/(TMNT[nrow(TMNT), 'MIN']/5)
+        if(is.na(TMNT[row, 'FTM']/TMNT[row, 'FTA']) == TRUE){
+          freeThrowPercent = 0
+        }else{
+          freeThrowPercent = TMNT[row, 'FTM']/TMNT[row, 'FTA']
+        }
+        
+        
+
+
+        # qAST
+        qAST = (percentMP*(1.14*((TMNT[nrow(TMNT), 'AST']-TMNT[row, 'AST'])/TMNT[nrow(TMNT), 'FGM']))) + ((((TMNT[nrow(TMNT), 'AST']/TMNT[nrow(TMNT), 'MIN'])*TMNT[row, 'MIN']*5-TMNT[row, 'AST'])/((TMNT[nrow(TMNT), 'FGM']/TMNT[nrow(TMNT), 'MIN'])*TMNT[row, 'MIN']*5-TMNT[row, 'FGM']))*(1-percentMP))
+    
+        # Field Goal Part
+        FGPart = TMNT[row, 'FGM']*(1. - 0.5*((TMNT[row, 'PTS']-TMNT[row, 'FTM'])/(2.*TMNT[row, 'FGA']))*qAST)
+    
+        # Assist Part
+        ASTPart = 0.5*(((TMNT[nrow(TMNT), 'PTS'] - TMNT[nrow(TMNT), 'FTM']) - (TMNT[row, 'PTS']-TMNT[row, 'FTM']))/(2*(TMNT[nrow(TMNT), 'FGA'] - TMNT[row, 'FGA'])))*TMNT[row, 'AST']
+        
+        # Free Throw Part
+        FTPart = (1 - (1 - (freeThrowPercent))^2)*0.4*TMNT[row, 'FTA']
+        
+        # Team OREB%
+        TeamOREBPercent = TMNTtotOReb/(TMNTtotOReb + ((sum(OPP[1:nrow(OPP)-1, 'REB']))-sum(OPP[1:nrow(OPP)-1, 'OREB'])))
+        
+        # Team OREB Weight
+        TeamOREBWeight = ((1. - TeamOREBPercent)*TeamPlayPercent)/((1. - TeamOREBPercent)*TeamPlayPercent +TeamOREBPercent*(1-TeamPlayPercent))
+        
+        # OREB Part
+        OREBPart = playerOREB*TeamOREBWeight*TeamPlayPercent
+        
+        # Scoring Possession
+        SCPoss = (FGPart + ASTPart + FTPart)*(1-(TMNTtotOReb/TeamSCPoss)*(TeamOREBWeight*TeamPlayPercent)) + OREBPart
+    
+        #FG per Possession
+        FGxPoss = (TMNT[row, 'FGA'] - TMNT[row, 'FGM'])*(1-1.07*TeamOREBPercent)
+        
+        # FT Per Possession
+        FTxPoss = ((1 - freeThrowPercent)^2)*0.4*TMNT[row, 'FTA']
+        
+        # Total Possessions
+        TotPoss = SCPoss + FGxPoss + FTxPoss + TMNT[row, 'TO']
+        
+        # Points Produced - Field Goals
+        PProdFGPart = 2*(TMNT[row, 'FGM'] + 0.5*TMNT[row, '3PTM']) * (1-0.5*((TMNT[row, 'PTS'] - TMNT[row, 'FTM'])/(2*TMNT[row, 'FGA']))*qAST)
+        if (is.na(PProdFGPart) == TRUE){
+          PProdFGPart = 0
+        }
+        
+        # Points Produced - OREBs
+        PProdOREBPart = playerOREB * TeamOREBWeight*TeamPlayPercent*((TMNT[nrow(TMNT), 'PTS'])/(TMNT[nrow(TMNT), 'FGM']+(1.-(1.-teamFTP)^2)*.4*TMNT[nrow(TMNT), 'FTA']))
+        if (is.na(PProdOREBPart) == TRUE){
+          PProdOREBPart = 0
+        }
+        
+        #Points Produced - Assists
+        PProdASTPart = 2*((TMNT[nrow(TMNT), 'FGM'] - TMNT[row, 'FGM'] + .5*(TMNT[nrow(TMNT), '3PTM']-TMNT[row, '3PTM']))/(TMNT[nrow(TMNT), 'FGM'] - TMNT[row, 'FGM']))*0.5*(((TMNT[nrow(TMNT), 'PTS'] - TMNT[nrow(TMNT), 'FTM']) - (TMNT[row, 'PTS']-TMNT[row, 'FTM']))/(2*(TMNT[nrow(TMNT), 'FGA']-TMNT[row, 'FGA'])))*TMNT[row, 'AST']
+        if (is.na(PProdASTPart) == TRUE){
+          PProdASTPart = 0
+        }
+        
+        #Total Points Produced
+        PProd = (PProdFGPart + PProdASTPart + TMNT[row, 'FTM'])*(1.-(TMNTtotOReb/TeamSCPoss)*TeamOREBWeight*TeamPlayPercent) + PProdOREBPart
+        if (is.na(PProd) == TRUE){
+          PProd = 0
+        }
+        
+        # ORTG
+        ORTG = 100*(PProd / TotPoss)
+        TMNT[row, 'ORtg'] = ORTG
+        TMNT[row, 'TotPoss'] = TotPoss
+        
+        
+    }
+    TMNT[nrow(TMNT), 'ORtg'] = 0
+    
+    ## Drop Rows with NA ORTG
+    TMNT = TMNT[!is.na(TMNT$ORtg),]
+    TMNT[nrow(TMNT), 'ORtg'] = sum(TMNT[, 'ORtg'])/(nrow(TMNT)-1)
+
+    #### Defensive Rating
+
+    totalPoss = 0.5 * ((TMNT[nrow(TMNT), 'FGA'] + 0.4 * TMNT[nrow(TMNT), 'FTA'] - 1.07*(TMNTtotOReb / (TMNTtotOReb + OPPtotDReb)) * (TMNT[nrow(TMNT), 'FGA'] - TMNT[nrow(TMNT), 'FGM']) + TMNT[nrow(TMNT), 'TO']) + (OPP[nrow(OPP), 'FGA'] + 0.4*OPP[nrow(OPP), 'FTA'] - 1.07*(OPPtotOReb / (OPPtotOReb + OPPtotDReb)) * (OPP[nrow(OPP), 'FGA'] - OPP[nrow(OPP), 'FGM']) + OPP[nrow(OPP), 'TO']))
+    
+    DFGPercent= OPP[nrow(OPP), 'FGM']/OPP[nrow(OPP), 'FGA']
+    DORPercent = OPPtotOReb / (OPPtotOReb + TMNTtotDReb)
+    FMwt = (DFGPercent * (1-DORPercent)) / (DFGPercent * (1- DORPercent) + (1-DFGPercent)* DORPercent)
+    oppFTPercent = OPP[nrow(OPP), 'FTM']/OPP[nrow(OPP), 'FTA']
+    if (is.na(oppFTPercent)){
+      oppFTPercent = 0
+    }
+    
+    Team_Def_Rating = 100 * (OPP[nrow(OPP), 'PTS']/totalPoss)
+    D_PTS_per_ScPoss = OPP[nrow(OPP), 'PTS']/(OPP[nrow(OPP), 'FGM'] + (1 - (1 - (oppFTPercent))**2)  * OPP[nrow(OPP), 'FTA']*.4)
+    
+    for (row in 1:(nrow(TMNT)-1)) {
+      Stops1 = TMNT[row, 'STL'] + TMNT[row, 'BLK'] * FMwt * (1 - 1.07 * DORPercent) + TMNT[row, 'DREB'] * (1 - FMwt)
+      Stops2 = (((OPP[nrow(OPP), 'FGA']-OPP[nrow(OPP), 'FGM'] - TMNT[nrow(TMNT), 'BLK'])/ TMNT[nrow(TMNT), 'MIN']) * FMwt * (1 - 1.07 * DORPercent) + ((OPP[nrow(OPP), 'TO'] - TMNT[nrow(TMNT), 'STL']) / TMNT[nrow(TMNT), 'MIN'])) * TMNT[row, 'MIN'] + (TMNT[row, 'PF']/TMNT[nrow(TMNT), 'PF']) * 0.4 * OPP[nrow(OPP), 'FTA'] * (1 - ( oppFTPercent))**2
+      if (is.na(Stops2) == TRUE){
+          Stops2 = 0
+        }
+      Stops = Stops1 + Stops2
+      StopPercent = (Stops * sum(OPP[1:nrow(OPP)-1, 'MIN'])) / (totalPoss * TMNT[row, 'MIN'])
+      
+      DRtg = Team_Def_Rating + 0.2 * (100 * D_PTS_per_ScPoss * (1 - StopPercent) - Team_Def_Rating)
+      TMNT[row, 'DRtg'] = DRtg
+    }
+    
+    #### Net Rating
+       for (row in 1:(nrow(TMNT)-1)) {
+      TMNT[row, 'USG'] = 100* ((TMNT[row, 'FGA'] + 0.44*TMNT[row, 'FTA'] + TMNT[row, 'TO']) * (TMNT[nrow(TMNT), 'MIN']/5)) / (TMNT[row, 'MIN']* (TMNT[nrow(TMNT), 'FGA'] + 0.44*TMNT[nrow(TMNT), 'FTA'] + TMNT[nrow(TMNT), 'TO']))
+      TMNT[row, 'Net'] = TMNT[row, 'ORtg'] - TMNT[row, 'DRtg']
+      net = TMNT[row, 'ORtg'] - TMNT[row, 'DRtg']
+      
+    }
+    TMNT = TMNT %>% mutate(weighted_net = ((USG*(0.8))*Net)/50)
+    
+    game_log[nrow(game_log), 'awayAvgORTG'] = as.numeric(drop_na(TMNT) %>% summarize(mean(ORtg)))
+    game_log[nrow(game_log), 'awayAvgDRTG'] = as.numeric(drop_na(TMNT) %>% summarize(mean(DRtg)))
+    game_log[nrow(game_log), 'awayAvgNet'] = as.numeric(drop_na(TMNT) %>% summarize(mean(Net)))
+    game_log[nrow(game_log), 'awayAvgWeightedNet'] = as.numeric(drop_na(TMNT) %>% summarize(mean(weighted_net)))
+    #### ELO Rating
+    
+    # Static Vars
+    AvgPlayerNet = sum(TMNT[1:nrow(TMNT)-1, 'Net'])/(nrow(TMNT)-1)
+    
+    
+      #  #rolling rating
+#for(row in 1:(nrow(TMNT)-1)) {
+#      player = TMNT[row, 'player']
+#      player_id = TMNT[row, 'player_id']
+#       if ((as.numeric(player_id)) %in% ELO_historical$Player_ID & !((as.numeric(player_id)) %in% ELO_df$Player_ID)){
+#        eloOld = (ELO_historical[ELO_historical$Player_ID == as.numeric(player_id), 'ELO_Rating'])*.9 + 1500*.1
+#        TMNTelonew = eloOld
+#         ELO_df[(nrow(ELO_df) + 1), 'Team'] = team
+#        ELO_df[nrow(ELO_df), 'ELO_Rating'] = round(TMNTelonew, 3)
+#        ELO_df[nrow(ELO_df), 'Player'] = player
+#        ELO_df[nrow(ELO_df), 'Player_ID'] = player_id
+#        ELO_df[nrow(ELO_df), 'Season'] = season
+#        ELO_df[nrow(ELO_df), 'GOG_Change'] = 0
+#        ELO_df[nrow(ELO_df), 'times updated'] = 0
+#       } 
+# }
+    
+    
+      for (row in 1:(nrow(TMNT)-1)) {
+      player = TMNT[row, 'player']
+      player_id = TMNT[row, 'player_id']
+      
+     if ((as.numeric(player_id)) %in% ELO_df$Player_ID){
+        eloOld = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'ELO_Rating']
+        test_eloOld = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'test_ELO_Rating']
+        TMNTelonew = eloOld + 40*(MOV)*(oppWin - oppProb) + TMNT[row, 'Net']/10
+        test_TMNTelonew = test_eloOld + 30*(test_MOV)*(win - test_oppProb)+ (TMNT[row, 'weighted_net'])*0.8
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'ELO_Rating'] = round(TMNTelonew, 3)
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'test_ELO_Rating'] = round(test_TMNTelonew, 3)
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'GOG_Change'] =  ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'GOG_Change'] + (TMNTelonew - eloOld)
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'times updated'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'times updated']+1
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalNet'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalNet'] + TMNT[row, 'Net']/10
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalNetWeighted'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalNetWeighted'] + (TMNT[row, 'weighted_net'])*0.8
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalORtg'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalORtg'] + TMNT[row, 'ORtg']
+        ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalDRtg'] = ELO_df[ELO_df$Player_ID == as.numeric(player_id), 'totalDRtg'] + TMNT[row, 'DRtg']
+ 
+                
+      } else { 
+        TMNTelonew = ((avgOPPelo * 0.6) + (1500*.4)) + 40*(MOV)*(oppWin - oppProb) + TMNT[row, 'Net']/10
+        TMNTelotest = ((test_avgOPPelo * 0.6) + (1500*.4)) + 30*(test_MOV)*(oppWin - test_oppProb)+ (TMNT[row, 'weighted_net'])*0.8
+        ELO_df[(nrow(ELO_df) + 1), 'Team'] = team
+        ELO_df[nrow(ELO_df), 'ELO_Rating'] = round(TMNTelonew, 3)
+        ELO_df[nrow(ELO_df), 'test_ELO_Rating'] = round(TMNTelotest, 3)
+        ELO_df[nrow(ELO_df), 'Player'] = player
+        ELO_df[nrow(ELO_df), 'Player_ID'] = player_id
+        ELO_df[nrow(ELO_df), 'Season'] = season
+        ELO_df[nrow(ELO_df), 'totalNet'] = TMNT[row, 'Net']/10
+        ELO_df[nrow(ELO_df), 'totalNetWeighted'] = (TMNT[row, 'weighted_net'])*0.8
+        ELO_df[nrow(ELO_df), 'totalORtg'] = TMNT[row, 'ORtg']
+        ELO_df[nrow(ELO_df), 'totalDRtg'] = TMNT[row, 'DRtg']
+        ELO_df[nrow(ELO_df), 'GOG_Change'] = 0
+        ELO_df[nrow(ELO_df), 'times updated'] = 1
+        }
+    
+    }
+    
+  
+  
+    
+    
+}
+  
+    
+    }, error = function(e){
+      message(e)
+      print(paste("error", daily_schedule[val, 'game_id'], val, team, player)) 
+      empty_gameID[nrow(empty_gameID) + 1, 'game_id'] = daily_schedule[val, 'game_id']
+     empty_gameID[nrow(empty_gameID), 'reason'] = "timeout"
+   }, warning = function(w){
+      print("warning")
+      empty_gameID[nrow(empty_gameID) + 1, 'game_id'] = daily_schedule[val, 'game_id']
+      empty_gameID[nrow(empty_gameID), 'reason'] = "timeout"
+    })
+    
+   
+}
+    
+
+
+  }
+  backupDF = ELO_df
+  game_log_backup = game_log
+  increment = increment + 1
+}
+```
+
+```{r}  
+library(dplyr)
+
+newFullELO2022 = ELO_df
+finalnewELO_2022 = ELO_df %>%
+  group_by(Team) %>% select(Team, ELO_Rating, test_ELO_Rating) %>% summarise_each(funs(mean)) %>% arrange(desc(ELO_Rating)) %>% mutate(ELOrank = dense_rank(-ELO_Rating)) %>% mutate(usgELOrank = dense_rank(-test_ELO_Rating))
+temp = ELO_df %>%
+  group_by(Team) %>% summarise(ELO_Rating = mean(test_ELO_Rating)) %>% arrange(desc(ELO_Rating))
+game_log_2022 =game_log
+
+plotdftakenew_201 %>% select(team)
+
+temp = newFullELO2015_2 %>%
+  group_by(Team) %>% summarise(ELO_Rating = mean(ELO_Rating)) %>% arrange(desc(ELO_Rating))
+tempPlot = left_join(temp, kenpom2015condense, by = c("Team" = "TeamName"))
+playoffTeams = tempPlot[!tempPlot$seed == 'NULL',]
+playoffTeams = drop_na(playoffTeams)
+
+finalELOteam_2016_1 = teamELO_df %>% select(Team, ELO_Rating, 'times updated')
+finalELOteam_2016_1 =  teamELO_df %>% group_by(Team) %>% summarize(avg_teamELO = mean(ELO_Rating)) %>%
+  arrange(desc(avg_teamELO))
+
+kenpom2015 = read.csv("/Users/matthewkearney/Downloads/summary15_pt.csv")
+
+kenpom2015condense = kenpom2015 %>% select("TeamName", "RankAdjEM", "seed")
+
+x = left_join(finalELOtakeNew_2016_2, kenpom2016, by = c("Team" = "TeamName"))
+write.csv(conference, "/Users/matthewkearney/Documents/conferenceData.csv")
+
+plotdfteam2_2019 = left_join(finalELOteam_2019_2, kenpom2019condense, by = c("Team" = "TeamName"))
+
+test2018 = inner_join(fullELO_2018_2, kenpom2018condense, by = c('Team' = 'TeamName'))
+
+filteredPlayers = left_join(filteredPlayers, kenpom2019condense, by = c("Team" = "TeamName"))
+
+library(tidyr)
+playoffTeams = plotdftakenew_2016_2[!plotdftakenew_2016_2$seed == 'NULL',]
+playoffTeams = drop_na(playoffTeams)
+plotdf = plotdftake1_2019_t[!plotdftake1_2019_t$seed == 'NULL',]
+plotdf = drop_na(plotdf) %>% arrange(seed)
+filteredPlayers = filteredPlayers[!filteredPlayers$seed == 'NULL',]
+filteredPlayers = drop_na(filteredPlayers)%>% arrange(as.numeric(seed)) 
+filteredPlayers = filteredPlayers %>% slice(-43,-45,-66,-64)
+
+
+playoffTeams = playoffTeams %>% arrange(as.numeric(seed)) %>% slice(-43,-45,-65,-64)
+playoffTeams = edit(playoffTeams)
+playoffTeamstake2 = left_join(playoffTeamstake2, tournamentWins, by = "Team")
+filteredPlayers = inner_join(plotdfTeam1_2019, NCAArank_2018)
+filteredPlayers %>% arrange(as.numeric(seed))
+
+plotdfTeam1_2017 = plotdfTeam1_2017[!plotdfTeam1_2017$seed == 'NULL',]
+
+playoffTeams = true_filtered_players
+
+playoffTeams = filteredPlayers
+playoffTeams = kenpom2018condense
+
+
+teams = ELO_df %>% filter(Team != 'Sam Houston') %>% group_by(Team) %>% summarize(avg_teamELO = mean(ELO_Rating)) %>%
+  arrange(desc(avg_teamELO))
+
+playoffTeams %>% arrange(as.numeric(seed))
+
+game_log %>% filter(home_team == 'Memphis' | away_team == 'Memphis')
+
+ELO_df %>% filter(Team == 'Memphis')# %>% summarize(mean(ELO_Rating))
+
+get_schedule(team = 'Memphis', season = '2018-19')
+
+game_log %>% filter(home_team == 'Alcorn State' | away_team == 'Alcorn State') %>% select(date, home_team, homeELO, homeUpdate, away_team, awayELO, awayUpdate)
+
+finalELOtakeNew_2018_4
+
+get_master_schedule('2018-11-06') %>% filter(home == 'Alcorn State')
+
+new
+```
+
+
+```{r}
+finalELOtakeNew_2018_2
+library(plotly)
+plot_ly(data = plotdftake2_2019, x = ~RankAdjEM, y = ~ELO_Rating)
+plot_ly(data = filteredPlayers, x = ~Rank, y = ~ELO_Rating)
+plot_ly(data = filteredPlayers, x = ~RankAdjEM, y = ~ELO_Rating)
+
+
+left_join((finalELOtakeNew_2018_3%>% select(Team, ELO_Rating, ELOrank)), (finalELOtakeNew_2018_4 %>% select(Team, ELO_Rating, ELOrank)), by = c('Team' = 'Team'))
+
+finalELOtakeNew_2019_3 =finalELOtakeNew_2019_3 %>% mutate(ELOrank = dense_rank(-ELO_Rating))
+
+
+bind_cols(player_result_2018, test_player_result_2018)## %>% select(Team...1, Team...5)
+```
+
+
+```{r}
+
+filteredELO_df = newFullELO2015_2[newFullELO2015_2$`times updated` > 15, ]
+
+filteredPlayers = filteredELO_df %>% group_by(Team) %>%
+  summarize(ELO_Rating = mean(test_ELO_Rating)) %>%
+  arrange(desc(ELO_Rating))
+filteredPlayers = left_join(filteredPlayers, kenpom2015condense, by = c("Team" = "TeamName"))
+filteredPlayers = filteredPlayers[!filteredPlayers$seed == 'NULL',]
+filteredPlayers = drop_na(filteredPlayers)%>% arrange(as.numeric(seed)) 
+playoffTeams =filteredPlayers
+
+testy = ELO_df %>% select(Team, Player, ELO_Rating, 'times updated')  %>% group_by(Team) %>% summarize(max_games_player = max(`times updated`)) %>% arrange(desc(max_games_player))
+
+
+finalELOtake3_2018
+
+ELO_df = backupDF
+
+
+finalELOtake1_2019
+filteredPlayers
+
+
+fullELO_2016_2  %>%
+  group_by(Team) %>% summarise(ELO_Rating = mean(ELO_Rating)) %>% arrange(desc(ELO_Rating))
+```
+
+```{r}
+### Tournament Win Prob
+
+tournamentDF = data.frame(matrix(nrow = 0, ncol = 7))
+eloCols = c("Team", "Opponent", "Seed", "ELO_Rating", 'Round', '%_Win', 'Wins')
+colnames(tournamentDF) = eloCols
+
+tournamentResults = data.frame(matrix(nrow = 0, ncol = 2))
+eloCols = c("Team",'Wins')
+colnames(tournamentResults) = eloCols
+
+
+seedPercents = data.frame(matrix(nrow = 16, ncol = 0))
+
+```
+
+
+```{r, echo=FALSE}
+
+playoffTeams = edit(playoffTeams)
+
+playoffTeams= left_join(playoffTeams, wins_2016)
+playoffTeams = drop_na(playoffTeams)
+```
+
+
+```{r, echo=FALSE}
+NCAA_Rank = 0
+playoffTeams = cbind(playoffTeams, NCAA_Rank)
+playoffTeams = playoffTeams %>% arrange((as.numeric(seed)))
+playoffTeams_2018 = edit(playoffTeams)
+
+seedPercents = edit(seedPercents)
+```
+
+```{r}
+write.csv(newFullELO2016_2, "/Users/matthewkearney/Documents/newELO_2016_2.csv")
+```
+
+```{r}
+playoffTeams = left_join(playoffTeams, regions_2015)
+
+library(tidyr)
+playoffTeams = drop_na(playoffTeams)
+```
+
+```{r}
+
+for (row in 1:nrow(playoffTeams)){
+  if (playoffTeams[row, 'seed'] == 1) {
+    playoffTeams[row, 'bracket_num'] = 1 
+  } else if (playoffTeams[row, 'seed'] == 16){
+    playoffTeams[row, 'bracket_num'] =2 
+  } else if (playoffTeams[row, 'seed'] == 8) {
+    playoffTeams[row, 'bracket_num'] =3 
+  } else if (playoffTeams[row, 'seed'] == 9) {
+    playoffTeams[row, 'bracket_num'] =4 
+  }else if (playoffTeams[row, 'seed'] == 5) {
+    playoffTeams[row, 'bracket_num'] =5 
+  }else if (playoffTeams[row, 'seed'] == 12) {
+    playoffTeams[row, 'bracket_num'] =6 
+  }else if (playoffTeams[row, 'seed'] == 4) {
+    playoffTeams[row, 'bracket_num'] =7 
+  }else if (playoffTeams[row, 'seed'] == 13) {
+    playoffTeams[row, 'bracket_num'] =8 
+  }else if (playoffTeams[row, 'seed'] == 6) {
+    playoffTeams[row, 'bracket_num'] =9 
+  }else if (playoffTeams[row, 'seed'] == 11) {
+    playoffTeams[row, 'bracket_num'] =10 
+  }else if (playoffTeams[row, 'seed'] == 3) {
+    playoffTeams[row, 'bracket_num'] =11 
+  }else if (playoffTeams[row, 'seed'] == 14) {
+    playoffTeams[row, 'bracket_num'] =12 
+  }else if (playoffTeams[row, 'seed'] == 7) {
+    playoffTeams[row, 'bracket_num'] =13 
+  }else if (playoffTeams[row, 'seed'] == 10) {
+    playoffTeams[row, 'bracket_num'] =14 
+  }else if (playoffTeams[row, 'seed'] == 2) {
+    playoffTeams[row, 'bracket_num'] =15 
+  }else if (playoffTeams[row, 'seed'] == 15) {
+    playoffTeams[row, 'bracket_num'] = 16 
+  }
+  
+}
+
+playoffTeams['Wins'] = 0
+playoffTeams = playoffTeams %>% rename('Region' = 'Reigon')
+playoffTeams = playoffTeams %>% arrange(-ELO_Rating)
+
+playoffTeams %>% group_by(Region) %>% summarise(mean(ELO_Rating))
+```
+
+```{r}
+tournamentDF = data.frame(matrix(nrow = 0, ncol = 7))
+eloCols = c("Team", "Opponent", "Seed", "ELO_Rating", 'Round', '%_Win', 'Wins')
+colnames(tournamentDF) = eloCols
+  reigons = c("E", 'W', 'S', 'M')
+  playoffTeams_drop = playoffTeams
+  games = c(8,4,2,1)
+  
+  for (Round in 1:4) {
+    for (x in 1:length(reigons)) {
+      Region = reigons[[x]]
+      increment = 1
+      winner_index = 1
+        for (x in 1:(games[Round])) {
+          team1 = playoffTeams_drop[playoffTeams_drop$Region == Region & playoffTeams_drop$bracket_num == increment, 'Team']
+          team2 = playoffTeams_drop[playoffTeams_drop$Region == Region & playoffTeams_drop$bracket_num == (increment+1), 'Team']
+          
+          elodiff = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)] - playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+          p1 = 1/(1+ 10^((-elodiff)/400))
+          
+          elodiff = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)] - playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+          p2 = 1/(1+ 10^((-elodiff)/400))
+          
+          
+          
+          
+          if (p1>p2){
+            
+            winner = team1
+            loser = team2
+            wins = if(is.null(playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team1)])){0} else {playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team1)]}
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p2
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins
+            
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p1 
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins + 1
+            
+          } else{
+            loser = team1
+            winner = team2
+            wins = if(is.null(playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team2)])){0} else {playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team2)]}
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p2
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins + 1
+            
+            
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p1  
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins
+            
+          }
+          
+          drop = which(playoffTeams_drop$Team == as.character(loser))
+          playoffTeams_drop = playoffTeams_drop[-c(drop), ]
+          playoffTeams_drop$bracket_num[playoffTeams_drop$Team == as.character(winner)] = winner_index
+          
+          winner_index = winner_index + 1
+          increment = increment + 2
+        }
+    }
+  }
+  ##final four
+          team1 = playoffTeams_drop[playoffTeams_drop$Region == reigons[[1]], 'Team']
+          team2 = playoffTeams_drop[playoffTeams_drop$Region == reigons[[2]], 'Team']
+          
+          elodiff = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)] - playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+          p1 = 1/(1+ 10^((-elodiff)/400))
+          
+          elodiff = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)] - playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+          p2 = 1/(1+ 10^((-elodiff)/400))
+          
+          if (p1>p2){
+            
+            winner = team1
+            loser = team2
+            wins = if(is.null(playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team1)])){0} else {playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team1)]}
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p2
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins
+            
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p1 
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins + 1
+            
+          } else{
+            loser = team1
+            winner = team2
+            wins = if(is.null(playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team2)])){0} else {playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team2)]}
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p2
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins + 1
+            
+            
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p1  
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins
+            
+          }
+          
+          drop = which(playoffTeams_drop$Team == as.character(loser))
+          playoffTeams_drop = playoffTeams_drop[-c(drop), ]
+##game 2
+          
+          team1 = playoffTeams_drop[playoffTeams_drop$Region == reigons[[3]], 'Team']
+          team2 = playoffTeams_drop[playoffTeams_drop$Region == reigons[[4]], 'Team']
+          
+          elodiff = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)] - playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+          p1 = 1/(1+ 10^((-elodiff)/400))
+          
+          elodiff = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)] - playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+          p2 = 1/(1+ 10^((-elodiff)/400))
+          
+          if (p1>p2){
+            
+            winner = team1
+            loser = team2
+            wins = if(is.null(playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team1)])){0} else {playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team1)]}
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p2
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins
+            
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p1 
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins + 1
+            
+          } else{
+            loser = team1
+            winner = team2
+            wins = if(is.null(playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team2)])){0} else {playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team2)]}
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p2
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins + 1
+            
+            
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p1  
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins
+            
+          }
+          
+          drop = which(playoffTeams_drop$Team == as.character(loser))
+          playoffTeams_drop = playoffTeams_drop[-c(drop), ]
+
+          
+          
+#last game
+          team1 = playoffTeams_drop[1, 'Team']
+          team2 = playoffTeams_drop[2, 'Team']
+          
+          elodiff = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)] - playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+          p1 = 1/(1+ 10^((-elodiff)/400))
+          
+          elodiff = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)] - playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+          p2 = 1/(1+ 10^((-elodiff)/400))
+          
+          if (p1>p2){
+            
+            winner = team1
+            loser = team2
+            wins = if(is.null(playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team1)])){0} else {playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team1)]}
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p2
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins
+            
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p1 
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins + 1
+            
+          } else{
+            loser = team1
+            winner = team2
+            wins = if(is.null(playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team2)])){0} else {playoffTeams_drop$Wins[playoffTeams_drop$Team == as.character(team2)]}
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team2)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p2
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins + 1
+            
+            
+            
+            tournamentDF[(nrow(tournamentDF)+1), 'Team'] = team1
+            tournamentDF[(nrow(tournamentDF)), 'Opponent'] = team2
+            tournamentDF[(nrow(tournamentDF)), 'Seed'] = playoffTeams_drop$seed[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'ELO_Rating'] = playoffTeams_drop$ELO_Rating[playoffTeams_drop$Team == as.character(team1)]
+            tournamentDF[(nrow(tournamentDF)), 'Round'] = Round
+            tournamentDF[(nrow(tournamentDF)), '%_Win'] = p1  
+            tournamentDF[(nrow(tournamentDF)), 'Wins'] = wins
+            
+          }
+          
+          drop = which(playoffTeams_drop$Team == as.character(loser))
+          playoffTeams_drop = playoffTeams_drop[-c(drop), ]
+
+         ## tf_tournamentResults_ELO_2016 = tournamentDF
+          results_2015 = tournamentDF %>% select(Team, Round, Wins, `%_Win`, Seed) %>% filter(Wins == 1) %>% mutate(season = '2014-15')
+          
+```
+
+```{r}
+true_filtered_ELO_2018%>%arrange(-ELO_Rating)
+
+bind_rows((plotdftakenew_2018_4 %>% mutate(season = '2018')), plotdftakenew_2015_2 %>% mutate(season = '2015'), plotdftakenew_2016_2 %>% mutate(season = '2016'), (plotdftakenew_2019_4 %>% mutate(season = '2019') %>% mutate(newseed = as.character(seed)) %>% select(Team, ELO_Rating, test_ELO_Rating, ELOrank, usgELOrank, RankAdjEM, newseed, season) %>% rename(seed = newseed))) %>% filter(seed == '11') %>% arrange(-ELO_Rating)
+
+
+```
+
+```{r}
+tournamentResults = tournamentResults %>% group_by(Team) %>% summarise(actualWins = sum(Wins)) %>% arrange(desc(wins))
+
+predictedResults_2019filter = tournamentResults_filterELO_2019 %>% group_by(Team) %>% summarise(predictedWins = sum(Wins)) %>% arrange(desc(predictedWins))
+
+playoffTeams = left_join(playoffTeams, predictedResults_2019filter, by = 'Team')
+
+playoffTeams = playoffTeams %>% select(-predictedWins)
+
+for (row in 1:nrow(playoffTeams)){
+  if (playoffTeams[row, "ActualWins"] == playoffTeams[row, "predictedWins.x"]){
+    playoffTeams[row, 'Correct'] = 'Correct'
+  } else{
+    playoffTeams[row, 'Correct'] = 'Incorrect'
+  }
+}
+
+playoffTeams %>% mutate(residual = abs(ActualWins - predictedWins)) %>% summarise(avg=  mean(residual))
+```
+
+```{r}
+x = bind_rows(results_2015, results_2016, results_2018, (results_2019%>% mutate(newseed = as.character(Seed)) %>% select(Team, Round, Wins, `%_Win`, newseed, season) %>% rename(Seed = newseed)))
+write.csv(x, '/Users/matthewkearney/Documents/tournamentResults.csv')
+```
+
+
+```{r}
+ 
+     for (row in 1:(nrow(TMNT)-1)) {
+      player = TMNT[row, 'player']
+      player_id = TMNT[row, 'player_id']
+      
+     if (length(ELO_df[ELO_df$Team == as.character(team) & ELO_df$Player == as.character(player), 'ELO_Rating']) != 0){
+        print("6")
+        eloOld = ELO_df[ELO_df$Player_ID == player_id, 'ELO_Rating']
+        TMNTelonew = eloOld + 30*(MOV)*(win - prob_Win) + TMNT[row, 'Net']/10
+        ELO_df[ELO_df$Player_ID == player_id, 'ELO_Rating'] = round(TMNTelonew, 3)
+        ELO_df[ELO_df$Player_ID == player_id, 'GOG_Change'] =  ELO_df[ELO_df$Player_ID == player_id, 'GOG_Change'] + (TMNTelonew - eloOld)
+        ELO_df[ELO_df$Player_ID == player_id, 'times updated'] = ELO_df[ELO_df$Player_ID == player_id, 'times updated']+1
+
+         
+      } else { 
+        TMNTelonew = 1500 + 30*(MOV)*(win - prob_Win) + TMNT[row, 'Net']/10
+        ELO_df[(nrow(ELO_df) + 1), 'Team'] = team
+        ELO_df[nrow(ELO_df), 'ELO_Rating'] = round(TMNTelonew, 3)
+        ELO_df[nrow(ELO_df), 'Player'] = player
+        ELO_df[nrow(ELO_df), 'Player_ID'] = player_id
+        ELO_df[nrow(ELO_df), 'Season'] = season
+        ELO_df[nrow(ELO_df), 'GOG_Change'] = 0
+        ELO_df[nrow(ELO_df), 'times updated'] = 1
+        print("5")
+        }
+    
+    }
+    
+    
+
+
+elodiff = as.integer(finalELOtake3_2019[finalELOtake3_2019$Team == 'Murray State', 'ELO_Rating']) - as.integer(finalELOtake3_2019[finalELOtake3_2019$Team == 'Marquette', 'ELO_Rating'] )
+    prob_Win = 1/(1+ 10^((-elodiff)/400))
+```
+
+```{r}
+row = 6
+      playerOREB = TMNT[row, 'OREB']
+      
+        percentMP = TMNT[row, 'MIN']/(TMNT[nrow(TMNT), 'MIN']/5)
+        if(is.na(TMNT[row, 'FTM']/TMNT[row, 'FTA']) == TRUE){
+          freeThrowPercent = 0
+        }else{
+          freeThrowPercent = TMNT[row, 'FTM']/TMNT[row, 'FTA']
+        }
+
+        qAST = (percentMP*(1.14*((TMNT[nrow(TMNT), 'AST']-TMNT[row, 'AST'])/TMNT[nrow(TMNT), 'FGM']))) + 
+          ((((TMNT[nrow(TMNT), 'AST']/TMNT[nrow(TMNT), 'MIN'])*TMNT[row, 'MIN']*5-TMNT[row, 'AST'])
+            /
+              ((TMNT[nrow(TMNT), 'FGM']/TMNT[nrow(TMNT), 'MIN'])*TMNT[row, 'MIN']*5-TMNT[row, 'FGM']))*(1-percentMP))
+
+```
+
